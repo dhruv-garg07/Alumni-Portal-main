@@ -1,31 +1,27 @@
-import React from 'react';
-import {Link, Outlet, useNavigate } from 'react-router-dom';
-import { useState } from 'react'; // Import useState hook if not already imported
-import Login from './pages/Login'
+import React, { useState, useEffect } from 'react';
+import { Outlet, Navigate } from 'react-router-dom';
+import { auth } from './firebase'; // Import Firebase auth
+import { onAuthStateChanged } from "firebase/auth";
 
 const PrivateRoute = () => {
-    // const auth = null; // determine if authorized, from context or however you're doing it
-    const [isLoggedIn, setIsLoggedIn] = useState(() => {
-        return localStorage.getItem("userId") !== null;
-    });
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
 
-    // const navigate = useNavigate();
-    
-    // const handleSubmit = () => {
-    //     navigate('/login');
-    // }
+    useEffect(() => {
+        // Listen for auth state changes
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setLoading(false); // Stop loading once we get the user state
+        });
 
-    // If authorized, return an outlet that will render child elements
-    // If not, navigate to the login page
-    if (/*isLoggedIn*/ true) {
-        return <Outlet />;
-    } else {
-        // navigate("/login");
-        // handleSubmit();
-        // <Navigate to="/login"/>
-        return <Login/>;
-        // return null;
+        return () => unsubscribe(); // Cleanup listener when unmounted
+    }, []);
+
+    if (loading) {
+        return <div>Loading...</div>; // Show loading state while checking auth
     }
-}
+
+    return user ? <Outlet /> : <Navigate to="/login" />;
+};
 
 export default PrivateRoute;

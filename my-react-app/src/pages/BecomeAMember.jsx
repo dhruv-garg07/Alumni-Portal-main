@@ -40,9 +40,8 @@ const BecomeAMember = () => {
     name: '',
     phone: '',
     countryCode: '',
-    entryNo: '',
+    college: '',
     country: '',
-    hostel: '',
     degree: '',
     department: '',
     passingYear: '',
@@ -55,7 +54,6 @@ const BecomeAMember = () => {
     approved: false,
     primaryemail: "",
     additional_degree: "",
-    por: "",
     placeofposting: "",
     suggestions: ""
 
@@ -163,9 +161,9 @@ const BecomeAMember = () => {
       </div>
     );
   }
-  if (isLoggedIn) {
-    navigate("/home");
-  }
+  // if (isLoggedIn) {
+  //   navigate("/home");
+  // }
   const handleSubmit = async (e) => {
     e.preventDefault();
     const mandatoryFields = [
@@ -173,9 +171,8 @@ const BecomeAMember = () => {
       "primaryemail",
       "phone",
       "countryCode",
-      "entryNo",
+      "college",
       "country",
-      "hostel",
       "degree",
       "department",
       "passingYear",
@@ -190,10 +187,7 @@ const BecomeAMember = () => {
       setErrorMessage("Please fill in all mandatory fields.");
       return;
     }
-    if (!/^\d{4}[A-Za-z]{3}\d{4}$/.test(editedUser["entryNo"])) {
-      setErrorMessage("Please enter a valid Entry Number.");
-      return;
-    }
+
     if (
       editedUser["passingYear"].length !== 4 ||
       isNaN(editedUser["passingYear"])
@@ -226,7 +220,7 @@ const BecomeAMember = () => {
       return;
     }
     const colRef = collection(db, "Users");
-    const q = query(colRef, where("entryNo", "==", editedUser["entryNo"]));
+    const q = query(colRef, where("college", "==", editedUser["college"]));
     const snapshot = await getDocs(q);
     console.log(snapshot);
     console.log(snapshot.size);
@@ -440,7 +434,7 @@ const BecomeAMember = () => {
       editedUser['email'] = email;
       console.log(profilePicture);
       if (profilePicture) {
-        const storageRef = ref(storage, `/files/${editedUser['entryNo']}`)
+        const storageRef = ref(storage, `/files/${editedUser['college']}`)
         console.log("stor ref: ", storageRef);
         const uploadTask = uploadBytesResumable(storageRef, profilePicture);
 
@@ -836,8 +830,8 @@ const BecomeAMember = () => {
         <input type="text" name="name" placeholder="Your Name" value={editedUser.name} onChange={handleInputChange} />
     </div>
     <div className="form-group">
-        <label>Entry Number*</label>
-        <input type="text" name="entryNo" placeholder="Entry Number" value={editedUser.entryNo} onChange={handleInputChange} />
+        <label>College*</label>
+        <input type="text" name="college" placeholder="College" value={editedUser.college} onChange={handleInputChange} />
     </div>
     <div className="form-group">
         <label>Year of Joining*</label>
@@ -854,24 +848,15 @@ const BecomeAMember = () => {
             <option value="others">Others</option>
         </select>
     </div>
-    <div className="form-group">
-        <label>Your Hostel*</label>
-        <select name="hostel" value={editedUser.hostel} onChange={handleInputChange}>
-            <option value="">Choose</option>
-            <option value="chenab">Chenab</option>
-            <option value="ravi">Ravi</option>
-            <option value="satluj">Satluj</option>
-            <option value="bhramputra">Brahmaputra</option>
-            <option value="beas">Beas</option>
-        </select>
-    </div>
+    
     <div className="form-group">
         <label>Place of Posting*</label>
         <input type="text" name="placeofposting" placeholder="Place of Posting" value={editedUser.placeofposting} onChange={handleInputChange} />
     </div>
+
     <div className="form-group">
-        <label>Admin Positions held at IIT Ropar</label>
-        <input type="text" name="por" placeholder="Position of Responsibility" value={editedUser.por} onChange={handleInputChange} />
+        <label>Current Country of Residence*</label>
+        <input type="text" name="country" placeholder="Country" value={editedUser.country} onChange={handleInputChange} />
     </div>
 </div>
 
@@ -915,10 +900,6 @@ const BecomeAMember = () => {
             <option value="DS">Data Science</option>
             <option value="Bio">Biomedical</option>
         </select>
-    </div>
-    <div className="form-group">
-        <label>Current Country of Residence*</label>
-        <input type="text" name="country" placeholder="Country" value={editedUser.country} onChange={handleInputChange} />
     </div>
     <div className="form-group">
         <label>Additional Degree</label>

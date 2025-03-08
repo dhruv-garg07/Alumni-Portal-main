@@ -16,7 +16,7 @@ import {
 import {storage} from "../firebase.js"
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import image from '.././assets/Spiraliitropar.jpg'
+import image from '.././assets/login.jpg'
 import {motion} from 'framer-motion'
 import { faL } from '@fortawesome/free-solid-svg-icons';
 
@@ -434,7 +434,7 @@ const SignUp = () => {
                 transition={{ duration: 0.5 }}
                 className="text-4xl font-bold mb-4"
                 >
-                IIT Ropar Alumni Association
+                Faculty Portal
                 </motion.h1>
                 <motion.p
                 initial={{ opacity: 0, y: -50 }}
@@ -442,7 +442,7 @@ const SignUp = () => {
                 transition={{ duration: 1, delay: 0.3 }}
                 className="text-lg"
                 >
-                Sign up or log in to stay connected with your community
+                Stay connected with your community
                 </motion.p>
             </div>
                 </div>

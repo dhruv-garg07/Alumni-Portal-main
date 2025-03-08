@@ -7,6 +7,8 @@ import { AuthProvider } from './utilities/AuthContext';
 import DataList from './components/DataList';
 import PrivateRoute from './PrivateRoute';
 import Profile from './pages/Profile';
+import HomePage from './pages/HomePage';
+import Messages from './pages/Messages';
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
           {/* <Route exact path="/" element={<Home />} /> */}
           <Route exact path="/signup" element={<SignUp />} />
           <Route exact path="/login" element={<Login />} />
+          <Route exact path="/home" element={<HomePage />} />
+          <Route exact path="/messages" element={<Messages />} />
           <Route exact path='/profile' element={<PrivateRoute/>}>
             <Route exact path='/profile' element={<Profile/>}/>
           </Route>
