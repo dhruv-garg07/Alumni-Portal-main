@@ -103,12 +103,12 @@ const Profile = () => {
         const fetchUserData = async () => {
             try {
                 console.log("trying to fetch");
-                const userId = auth.currentUser.uid;
-                console.log("userid:  ", userId);
+                const emailId = auth.currentUser.email;
+                console.log("emailid:  ", emailId);
                 
                 const colRef = collection(db, 'Users');
                 console.log(colRef);
-                const q = query(colRef, where('uid', '==', userId));
+                const q = query(colRef, where('email', '==', emailId));
                 
                 try {
                     const snapshot = await getDocs(q);

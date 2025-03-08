@@ -3,6 +3,7 @@ import { useState } from 'react'; // Import useState hook if not already importe
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
 import BecomeAMember from './pages/BecomeAMember'
+import BecomeAProfessor from './pages/BecomeAProfessor'
 import { AuthProvider } from './utilities/AuthContext';
 import DataList from './components/DataList';
 import PrivateRoute from './PrivateRoute';
@@ -23,7 +24,8 @@ function App() {
           <Route exact path='/profile' element={<PrivateRoute/>}>
             <Route exact path='/profile' element={<Profile/>}/>
           </Route>
-          <Route exact path="/BecomeAMember" element={<BecomeAMember />} />
+          <Route exact path="/becomeamember" element={<BecomeAMember />} />
+          <Route exact path="/becomeaprofessor" element={<BecomeAProfessor />} />
           <Route exact path="/datalist" element={<DataList/>} />
         </Routes>
       </AuthProvider>

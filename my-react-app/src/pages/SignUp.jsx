@@ -197,19 +197,18 @@ const SignUp = () => {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if(selectedOption === ""){
-            errorMessage = "Select Option Alumni/Admin.";
-            toast.error(errorMessage, toastOptions);
-            return;
-        }
+      e.preventDefault();
+      if(selectedOption === ""){
+          errorMessage = "Select Option Alumni/Admin.";
+          toast.error(errorMessage, toastOptions);
+          return;
+      }
         
-        if(email === ""){
-            errorMessage = "Email is required.";
-            toast.error(errorMessage, toastOptions);
-            return;
-        }
+      if(email === ""){
+          errorMessage = "Email is required.";
+          toast.error(errorMessage, toastOptions);
+          return;
+      }
 
         // if(email === "2021csb1184@iitrpr.ac.in"){
         //     errorMessage = "Email already is required.";
@@ -217,78 +216,65 @@ const SignUp = () => {
         //     return;
         // }
         
-        if(name === ""){
-            errorMessage = "UserName is required.";
+    if(name === ""){
+        errorMessage = "UserName is required.";
+        toast.error(errorMessage, toastOptions);
+        return;
+    }
+    let type="Users";
+    if(selectedOption === "Professor"){
+        type="Professor";
+    }
+    else if(selectedOption === "Admin"){
+        type="Admin";
+    }
+        
+    const colRef = collection(db, type);
+    const q = query(colRef, where('email', '==', email));   
+  
+    try {
+        console.log("in signup try part")
+        const snapshot = await getDocs(q);
+      
+        if (snapshot.size > 0) {
+          // Documents satisfying the query exist
+            errorMessage = "Entered email is already in use. Please log in or use different email id.";
             toast.error(errorMessage, toastOptions);
             return;
-        }
-
-        if(selectedOption=="Alumni"){
+        } 
+    } catch (error) {
+        console.error('Error getting documents:', error);
+    }
         
-          const colRef = collection(db, 'Users');
-          const q = query(colRef, where('email', '==', email));
+    setIsLoading(true);
+    try {
+        const data = {
+            email: email,
+        };
+        console.log("calling api");
+        console.log("ENV:", process.env);
+        console.log("Link:",process.env.REACT_APP_API_URL);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/email/sendotp`, {
+            method: "POST",
+            body: JSON.stringify(data),
+            headers: {
+              "Content-Type": "application/json",
+            },
+        });
+        console.log(response)
+        // setUserRes(response.data);
 
-          try {
-              console.log("in signup try part")
-              const snapshot = await getDocs(q);
-            
-              if (snapshot.size > 0) {
-                // Documents satisfying the query exist
-                  errorMessage = "Entered email is already in use. Please log in or use different email id.";
-                  toast.error(errorMessage, toastOptions);
-                  return;
-              } 
-          } catch (error) {
-              console.error('Error getting documents:', error);
-          }
+        if(response.status !== 200) {
+            errorMessage = "Failed to send OTP.";
+            toast.error(errorMessage, toastOptions);
+            return;
+        } else {
+            setResendDisabled(true);
+            setResendTimer(60);
+            notifySuccess("OTP sent to your email id");
+            setIsOtpSent(true);
+            setShowVerifyButton(true);
         }
-        else{
-          const colRef = collection(db, 'admin');
-          const q = query(colRef, where('email', '==', email));
-
-          try {
-              console.log("in signup try part")
-              const snapshot = await getDocs(q);
-            
-              if (snapshot.size > 0) {
-                  errorMessage = "Entered email is already in use. Please log in or use different email id.";
-                  toast.error(errorMessage, toastOptions);
-                  return;
-              } 
-          } catch (error) {
-              console.error('Error getting documents:', error);
-          }
-        }
-        setIsLoading(true);
-        try {
-            const data = {
-                email: email,
-            };
-
-            console.log("calling api");
-            console.log("ENV:", process.env);
-            console.log("Link:",process.env.REACT_APP_API_URL);
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/email/sendotp`, {
-                method: "POST",
-                body: JSON.stringify(data),
-                headers: {
-                  "Content-Type": "application/json",
-                },
-            });
-            console.log(response)
-            // setUserRes(response.data);
-
-            if(response.status !== 200) {
-                errorMessage = "Failed to send OTP.";
-                toast.error(errorMessage, toastOptions);
-                return;
-            } else {
-                setResendDisabled(true);
-                setResendTimer(60);
-                notifySuccess("OTP sent to your email id");
-                setIsOtpSent(true);
-                setShowVerifyButton(true);
-            }
         } catch {
             errorMessage = "Failed to create an account.";
             toast.error(errorMessage, toastOptions);
@@ -301,16 +287,21 @@ const SignUp = () => {
         setIsLoading(true);
         try {
             if(otp ==="000000"){
-              if(selectedOption === "Alumni"){
+              if(selectedOption !== "Admin"){
                   await signup(email, "666666", name);
                   console.log("signup done");
                   notifySuccess("OTP verified successfully");
   
                   const userId = auth.currentUser.uid;
-                    localStorage.setItem("isAdmin", "false");
+                  localStorage.setItem("isAdmin", "false");
+                  if(selectedOption === "Alumni"){
                     navigate('/becomeamember', { state: { userId, email } });
+                  }
+                  else{
+                    navigate('/becomeaprofessor', { state: { userId, email } });
+                  }
                 }
-                if(selectedOption === "Admin"){
+                else{
                     notifySuccess("OTP verified successfully");
                     console.log("in dens admin mail frontend")
                     const data = {
@@ -407,9 +398,9 @@ const SignUp = () => {
                     navigate("/login");
                     return;
                 }
-                // if(email === "2021csb1184@iitrpr.ac.in"){
-                //     setIsAdmin(true);
-                // }
+                if(email === "2021eeb1166@iitrpr.ac.in"){
+                    setIsAdmin(true);
+                }
                 setIsOtpSent(false);
             }
         } catch {
@@ -458,6 +449,7 @@ const SignUp = () => {
             >
             <option value="">Select an option</option>
             <option value="Alumni">Alumni</option>
+            <option value="Professor">Professor</option>
             <option value="Admin">Admin</option>
             </select>
         </div>

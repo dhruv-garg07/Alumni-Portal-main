@@ -6,14 +6,6 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
-      {/* Navbar */}
-      <div className="flex justify-between items-center p-4 bg-white shadow-md">
-        <h1 className="text-2xl font-bold">Faculty Portal System</h1>
-        <div className="space-x-4">
-          <button onClick={() => navigate("/messages")} className="p-2 bg-blue-500 text-white rounded">Messages</button>
-          <button onClick={() => navigate("/profile")} className="p-2 bg-gray-500 text-white rounded">Profile</button>
-        </div>
-      </div>
       
       {/* Main Content */}
       <div className="mt-4 grid grid-cols-3 gap-4">

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Checkmark } from "react-checkmark";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faCheckSquare, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faProfessors, faCheckSquare, faUser } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "./BecomeAMember.css"; // Assuming you have a CSS file for this component
@@ -36,6 +36,7 @@ const BecomeAMember = () => {
   const [paymantoption, setpaymentoption] = useState("");
   const { userId, email } = location.state || {};
   const isAdmin = localStorage.getItem("isAdmin");
+  const isProfessor = localStorage.getItem("isProfessor");
   const [editedUser, setEditedUser] = useState({
     name: '',
     phone: '',
@@ -218,8 +219,8 @@ const BecomeAMember = () => {
       setErrorMessage("Please enter a valid 10-digit phone number");
       return;
     }
-    const colRef = collection(db, "Users");
-    const q = query(colRef, where("primaryemail", "==", editedUser["primaryemail"]));
+    const colRef = collection(db, "Professors");
+    const q = query(colRef, where("college", "==", editedUser["college"]));
     const snapshot = await getDocs(q);
     console.log(snapshot);
     console.log(snapshot.size);
@@ -417,19 +418,19 @@ const BecomeAMember = () => {
   };
 
   const handleSignUpClick = async () => {
-    const docRef = await addDoc(collection(db, "Users"), {
+    const docRef = await addDoc(collection(db, "Professors"), {
       uid: userId,
       email: email,
     });
-    const userDocRef = doc(db, "users", userId);
-    const colRef = collection(db, "Users");
+    const userDocRef = doc(db, "Professors", userId);
+    const colRef = collection(db, "Professors");
     const q = query(colRef, where("email", "==", email));
 
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.size > 0) {
       // Get the reference to the first matching document
-      const docRef = doc(db, 'Users', querySnapshot.docs[0].id);
+      const docRef = doc(db, 'Professors', querySnapshot.docs[0].id);
       editedUser['email'] = email;
       console.log(profilePicture);
       if (profilePicture) {
@@ -504,7 +505,7 @@ const BecomeAMember = () => {
       <div className="Become-Member-heading">
         <h1>
           {" "}
-          <FontAwesomeIcon icon={faUsers} /> Become A Member{" "}
+          <FontAwesomeIcon icon={faUser} /> Become A Member{" "}
         </h1>
       </div>
       <div className="member-info">
