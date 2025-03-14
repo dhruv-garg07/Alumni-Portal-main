@@ -42,10 +42,8 @@ const BecomeAMember = () => {
     phone: '',
     countryCode: '',
     college: '',
-    country: '',
-    degree: '',
+    designation: '',
     department: '',
-    passingYear: '',
     joiningYear: '',
     work_exp: [{}],
     higherEducation: [{}],// Store work experience as an array
@@ -54,8 +52,6 @@ const BecomeAMember = () => {
     email: '',
     approved: false,
     primaryemail: "",
-    additional_degree: "",
-    placeofposting: "",
     suggestions: ""
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -172,13 +168,9 @@ const BecomeAMember = () => {
       "phone",
       "countryCode",
       "college",
-      "country",
-      "degree",
+      "designation",
       "department",
-      "passingYear",
       "joiningYear",
-      "placeofposting"
-
     ];
     const missingFields = mandatoryFields.filter((field) => !editedUser[field]);
     if (missingFields.length > 0) {
@@ -189,32 +181,13 @@ const BecomeAMember = () => {
     }
 
     if (
-      editedUser["passingYear"].length !== 4 ||
-      isNaN(editedUser["passingYear"])
-    ) {
-      setErrorMessage("Please enter a valid 4-digit year");
-      return;
-    }
-    if (
       editedUser["joiningYear"].length !== 4 ||
       isNaN(editedUser["joiningYear"])
     ) {
       setErrorMessage("Please enter a valid 4-digit year");
       return;
     }
-    if (
-      parseInt(editedUser["passingYear"], 10) <
-      parseInt(editedUser["joiningYear"], 10)
-    ) {
-      setErrorMessage("Joining Should be before Passing");
-      return;
-    }
-    const currentYear = new Date().getFullYear();
-    const inputYear = parseInt(editedUser["passingYear"], 10);
-    if (currentYear < inputYear) {
-      setErrorMessage("Passing year should be less than current year");
-      return;
-    }
+
     if (editedUser["phone"].length !== 10 || isNaN(editedUser["phone"])) {
       setErrorMessage("Please enter a valid 10-digit phone number");
       return;
@@ -289,7 +262,7 @@ const BecomeAMember = () => {
         return (
           highEdu &&
           highEdu.institute &&
-          highEdu.degree &&
+          highEdu.designation &&
           highEdu.department &&
           highEdu.startYear &&
           highEdu.endYear
@@ -505,11 +478,11 @@ const BecomeAMember = () => {
       <div className="Become-Member-heading">
         <h1>
           {" "}
-          <FontAwesomeIcon icon={faUser} /> Become A Member{" "}
+          <FontAwesomeIcon icon={faUser} /> Become A Professor{" "}
         </h1>
       </div>
       <div className="member-info">
-        {isFormSubmitted === 1 ? (
+        {isFormSubmitted === 3 ? (
           <div className="member-form-container2">
             <h1> Let us know a bit more about you </h1>
             <p>Fields marked * are mandatory</p>
@@ -566,13 +539,13 @@ const BecomeAMember = () => {
                     </label>
                     <br />
                     <label>
-                      Degree:
+                      designation:
                       <br />
                       <input
                         type="text"
-                        name="degree"
+                        name="designation"
                         placeholder="MBA"
-                        value={highEdu.degree || ""}
+                        value={highEdu.designation || ""}
                         onChange={(e) => handleInputChangeHigherEdu(e, index)}
                       />
                     </label>
@@ -751,57 +724,56 @@ const BecomeAMember = () => {
               </button>
             </div>
           </div>
-        ) : isFormSubmitted === 2 ? (
-          <div className="member-form-container">
-            <h1> Pay Member Fees for joining the Alumni Network: </h1>
-            <br />
-            <div className="member-form-payment">
-              <div className="member-form-payment2">
-                <h2> Membership Fees: </h2>
-                <br />
-                <div className="membership-card-box">
-                  <div className="membership-card">
-                    <h3> Yearly Membership <br /> {yearlyMembershipFee} Rs</h3>
-                  </div>
-                  <br />
-                  <div className="membership-card">
-                    <h3> Lifetime Membership <br /> {lifetimeMembershipFee} Rs</h3>
-                  </div>
-                </div>
-                <label>
-                  Choose the Payment Option :
-                  <br />
-                  <select
-                    name="paymenttype"
-                    className="text_input-member"
-                    value={paymantoption}
-                    onChange={(e) => setpaymentoption(e.target.value)}
-                  >
-                    <option value="">Choose</option>
-                    <option value="Yearly">Yearly Membership</option>
-                    <option value="student">Lifetime Membership</option>
-                  </select>
-                </label>
-                <div
-                  className=" mt-[30px] ml-[40px] py-[4px] w-[400px] h-[40px] bg-indigo-800 text-white text-[27px] font-bold font-serif cursor-pointer"
-                  onClick={() => setIsFormSubmitted(3)}
-                >
-                  <p>Continue to Payment Conformation</p>
-                </div>
-              </div>
-              <div>
-                <img src="/images/payment.jpg" />
-              </div>
-            </div>
-          </div>
-        ) : isFormSubmitted === 3 ? (
+        // ) : isFormSubmitted === 2 ? (
+        //   <div className="member-form-container">
+        //     <h1> Pay Member Fees for joining the Alumni Network: </h1>
+        //     <br />
+        //     <div className="member-form-payment">
+        //       <div className="member-form-payment2">
+        //         <h2> Membership Fees: </h2>
+        //         <br />
+        //         <div className="membership-card-box">
+        //           <div className="membership-card">
+        //             <h3> Yearly Membership <br /> {yearlyMembershipFee} Rs</h3>
+        //           </div>
+        //           <br />
+        //           <div className="membership-card">
+        //             <h3> Lifetime Membership <br /> {lifetimeMembershipFee} Rs</h3>
+        //           </div>
+        //         </div>
+        //         <label>
+        //           Choose the Payment Option :
+        //           <br />
+        //           <select
+        //             name="paymenttype"
+        //             className="text_input-member"
+        //             value={paymantoption}
+        //             onChange={(e) => setpaymentoption(e.target.value)}
+        //           >
+        //             <option value="">Choose</option>
+        //             <option value="Yearly">Yearly Membership</option>
+        //             <option value="student">Lifetime Membership</option>
+        //           </select>
+        //         </label>
+        //         <div
+        //           className=" mt-[30px] ml-[40px] py-[4px] w-[400px] h-[40px] bg-indigo-800 text-white text-[27px] font-bold font-serif cursor-pointer"
+        //           onClick={() => setIsFormSubmitted(3)}
+        //         >
+        //           <p>Continue to Payment Conformation</p>
+        //         </div>
+        //       </div>
+        //       <div>
+        //         <img src="/images/payment.jpg" />
+        //       </div>
+        //     </div>
+        //   </div>
+        ) : isFormSubmitted === 1 ? (
           <div className="member-form-container2">
             <Checkmark />
             <div className="member-form-container3">
               <h1>
                 {" "}
-                Thank You {editedUser["name"]}, for joining IIT Ropar Alumni
-                Network{" "} <br />
+                Thank You {editedUser["name"]}, for joining Faculty Portal{" "} <br />
               </h1>
             </div>
             <div className="becomemember-payment"></div>
@@ -819,7 +791,7 @@ const BecomeAMember = () => {
           <div className="member-form-container">
             <h1>
               {" "}
-              Add your role details in - Indian Institute of Technology Ropar{" "}
+              Add your role details{" "}
             </h1>
             <p>Fields marked * are mandatory</p>
             <form className="form1" onSubmit={handleSubmit}>
@@ -838,25 +810,14 @@ const BecomeAMember = () => {
         <input type="text" name="joiningYear" placeholder="Year of Joining" value={editedUser.joiningYear} onChange={handleInputChange} />
     </div>
     <div className="form-group">
-        <label>Degree*</label>
-        <select name="degree" value={editedUser.degree} onChange={handleInputChange}>
+        <label>Designation*</label>
+        <select name="designation" value={editedUser.designation} onChange={handleInputChange}>
             <option value="">Choose</option>
-            <option value="undergraduate">Undergraduate (B.Tech/B.E./B.Sc.)</option>
-            <option value="masters">Masters (M.Tech/M.Sc.)</option>
-            <option value="phd">Ph.D</option>
-            <option value="dual-degree">Dual Degree</option>
-            <option value="others">Others</option>
+            <option value="assistant">Assistant Professor</option>
+            <option value="associate">Associate Professor</option>
+            <option value="professor">Professor</option>
+            <option value="visiting">Visiting Faculty</option>
         </select>
-    </div>
-    
-    <div className="form-group">
-        <label>Place of Posting*</label>
-        <input type="text" name="placeofposting" placeholder="Place of Posting" value={editedUser.placeofposting} onChange={handleInputChange} />
-    </div>
-
-    <div className="form-group">
-        <label>Current Country of Residence*</label>
-        <input type="text" name="country" placeholder="Country" value={editedUser.country} onChange={handleInputChange} />
     </div>
 </div>
 
@@ -879,14 +840,8 @@ const BecomeAMember = () => {
 </label>
 </div>
 
-
-
     <div className="form-group">
-        <label>Year of Passing*</label>
-        <input type="text" name="passingYear" placeholder="Year of Passing" value={editedUser.passingYear} onChange={handleInputChange} />
-    </div>
-    <div className="form-group">
-        <label>Your Department at IIT Ropar*</label>
+        <label>Your Department*</label>
         <select name="department" value={editedUser.department} onChange={handleInputChange}>
             <option value="">Choose</option>
             <option value="CSE">Computer Science</option>
@@ -899,17 +854,6 @@ const BecomeAMember = () => {
             <option value="AI">Artificial Intelligence</option>
             <option value="DS">Data Science</option>
             <option value="Bio">Biomedical</option>
-        </select>
-    </div>
-    <div className="form-group">
-        <label>Additional Degree</label>
-        <select name="additional_degree" className="text_input-member" value={editedUser.additional_degree} onChange={handleInputChange}>
-            <option value="">Choose</option>
-            <option value="minor">Minor</option>
-            <option value="concentration">Conc.</option>
-            <option value="honors">Honors</option>
-            <option value="additional internship">Additional Intern</option>
-            <option value="dual">Dual Degree</option>
         </select>
     </div>
     <div className="form-group">

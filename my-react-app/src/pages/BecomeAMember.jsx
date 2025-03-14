@@ -799,8 +799,7 @@ const BecomeAMember = () => {
             <div className="member-form-container3">
               <h1>
                 {" "}
-                Thank You {editedUser["name"]}, for joining IIT Ropar Alumni
-                Network{" "} <br />
+                Thank You {editedUser["name"]}, for joining Faculty Portal{" "} <br />
               </h1>
             </div>
             <div className="becomemember-payment"></div>
@@ -818,7 +817,7 @@ const BecomeAMember = () => {
           <div className="member-form-container">
             <h1>
               {" "}
-              Add your role details in - Indian Institute of Technology Ropar{" "}
+              Add your role details {" "}
             </h1>
             <p>Fields marked * are mandatory</p>
             <form className="form1" onSubmit={handleSubmit}>
