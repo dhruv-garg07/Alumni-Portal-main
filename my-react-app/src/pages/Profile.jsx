@@ -94,7 +94,9 @@ const Profile = () => {
     
     const navigate = useNavigate(); 
     const isAdmin = localStorage.getItem("isAdmin");
-    console.log(isAdmin);
+    const isProfessor = localStorage.getItem("isProfessor");
+    console.log("Admin:",isAdmin);
+    console.log("Professor:",isProfessor);
     useEffect(() => {
         console.log('Updated userData:', userData);
     }, [userData]);

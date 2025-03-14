@@ -39,6 +39,7 @@ const SignUp = () => {
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { isAdmin, setIsAdmin } = useContext(StateContext);
+    const { isProfessor, setIsProfessor } = useContext(StateContext);
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(60);
     // const [userRes, setUserRes] = useState(null);
@@ -209,12 +210,6 @@ const SignUp = () => {
           toast.error(errorMessage, toastOptions);
           return;
       }
-
-        // if(email === "2021csb1184@iitrpr.ac.in"){
-        //     errorMessage = "Email already is required.";
-        //     toast.error(errorMessage, toastOptions);
-        //     return;
-        // }
         
     if(name === ""){
         errorMessage = "UserName is required.";
@@ -230,7 +225,7 @@ const SignUp = () => {
     }
         
     const colRef = collection(db, type);
-    const q = query(colRef, where('email', '==', email));   
+    const q = query(colRef, where('email', '===', email));   
   
     try {
         console.log("in signup try part")
@@ -294,10 +289,12 @@ const SignUp = () => {
   
                   const userId = auth.currentUser.uid;
                   localStorage.setItem("isAdmin", "false");
+                  localStorage.setItem("isProfessor", "false");
                   if(selectedOption === "Alumni"){
                     navigate('/becomeamember', { state: { userId, email } });
                   }
                   else{
+                    localStorage.setItem("isProfessor", "true");
                     navigate('/becomeaprofessor', { state: { userId, email } });
                   }
                 }
@@ -363,10 +360,23 @@ const SignUp = () => {
                   // Storing user ID in local storage
                     // localStorage.setItem("userId", userId);
                     localStorage.setItem("isAdmin", "false");
+                    localStorage.setItem("isProfessor", "false");
                     navigate('/becomeamember', { state: { userId, email } });
                     return;
                 }
-                
+                if(selectedOption === "Professor"){
+                  await signup(email, "666666", name);
+                  console.log("signup done");
+                  notifySuccess("OTP verified successfully");
+  
+                  const userId = auth.currentUser.uid;
+                  // Storing user ID in local storage
+                    // localStorage.setItem("userId", userId);
+                    localStorage.setItem("isAdmin", "false");
+                    localStorage.setItem("isProfessor", "true");
+                    navigate('/becomeaprofessor', { state: { userId, email } });
+                    return;
+                }
                 if(selectedOption === "Admin"){
                     notifySuccess("OTP verified successfully");
                     console.log("in dens admin mail frontend")

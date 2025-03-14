@@ -16,17 +16,19 @@ function App() {
     <div className="App">
       <AuthProvider>
         <Routes>
-          {/* <Route exact path="/" element={<Home />} /> */}
           <Route exact path="/signup" element={<SignUp />} />
           <Route exact path="/login" element={<Login />} />
-          <Route exact path="/home" element={<HomePage />} />
-          <Route exact path="/messages" element={<Messages />} />
           <Route exact path='/profile' element={<PrivateRoute/>}>
             <Route exact path='/profile' element={<Profile/>}/>
+          </Route>
+          <Route exact path='/messages' element={<PrivateRoute/>}>
+            <Route exact path="/messages" element={<Messages />} />
           </Route>
           <Route exact path="/becomeamember" element={<BecomeAMember />} />
           <Route exact path="/becomeaprofessor" element={<BecomeAProfessor />} />
           <Route exact path="/datalist" element={<DataList/>} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="*" element={<Navigate to="/home" />}/>
         </Routes>
       </AuthProvider>
     </div>

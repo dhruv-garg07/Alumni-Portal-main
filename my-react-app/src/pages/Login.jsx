@@ -39,6 +39,7 @@ const Login = () => {
   // const [userRes, setUserRes] = useState(null);
 
   const { isAdmin, setIsAdmin } = useContext(StateContext);
+  const { isProfessor, setIsProfessor } = useContext(StateContext);
   
   useEffect(() => {
     if (resendDisabled) {
@@ -68,7 +69,7 @@ const Login = () => {
   const handleOptionSelect = (e) => {
     setSelectedOption(e.target.value);
   };
-  const roleOptions = ['Alumni', 'Admin'];
+  const roleOptions = ['Alumni','Professor', 'Admin'];
 
   const handleResendOTP = async () => {
     setResendDisabled(true);
@@ -164,8 +165,12 @@ const Login = () => {
       }
     }
     else{
+      let type='Users';
+      if(selectedOption === "Professor"){
+        type="Professors";
+      }
       console.log(Iemail);
-      const colRef = collection(db, 'Users');
+      const colRef = collection(db, type);
       const q = query(colRef, where('email', '==', Iemail));
       try {
         const snapshot = await getDocs(q);
@@ -231,7 +236,7 @@ const Login = () => {
       return;
     }
     if(selectedOption === ""){
-      errorMessage = "Choose Admin/Alumni.";
+      errorMessage = "Choose Admin/Professor/Alumni.";
       toast.error(errorMessage, toastOptions);
       return;
     }
@@ -278,6 +283,10 @@ const Login = () => {
                 setIsAdmin(true);
                 localStorage.setItem("isAdmin", "true");
             }
+            else if(selectedOption === "Professor"){
+              setIsAdmin(true);
+              localStorage.setItem("isProfessor", "true");
+            }
             navigate("/home"); 
             setIsOtpSent(false);
             return;
@@ -307,15 +316,16 @@ const Login = () => {
             // console.log(userId)
             localStorage.setItem("userId", userId);
             localStorage.setItem("isAdmin", false);
+            localStorage.setItem("isProfessor", false);
             if(selectedOption === "Admin"){
-              // if(email === "2021csb1184@iitrpr.ac.in"){
                 setIsAdmin(true);
                 localStorage.setItem("isAdmin", "true");
-              // }
+            }
+            else if(selectedOption === "Professor"){
+                setIsProfessor(true);
+                localStorage.setItem("isProfessor", "true");
             }
             navigate("/home"); 
-           
-            
             setIsOtpSent(false);
         }
     } catch {
@@ -367,6 +377,7 @@ const Login = () => {
               >
                 <option value="">Select an option</option>
                 <option value="Alumni">Alumni</option>
+                <option value="Professor">Professor</option>
                 <option value="Admin">Admin</option>
               </select>
             </div>
