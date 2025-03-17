@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Link } from "react-router-dom"; 
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
+import { db, auth } from "../firebase.js";
+import { addDoc, getDoc, getDocs, collection, doc, updateDoc, query, where } from "firebase/firestore";
+
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -16,14 +18,31 @@ const Navbar = () => {
     setActiveTab(location.pathname);
   }, [location.pathname]);
 
-  // Listen for authentication state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        const colRef = collection(db, 'Users');
+        console.log(colRef);
+        const q = query(colRef, where('uid', '==', currentUser.uid));
+        const snapshot = await getDocs(q);
+        console.log("Snapshot:",snapshot);
+        if (snapshot.size>0) {
+          snapshot.forEach((doc) => {
+            console.log(doc.id, '=>', doc.data());
+            setUser(doc.data());
+        });
+        } else {
+          console.log("No user document found!");
+          setUser(currentUser);
+        }
+      } else {
+        setUser(null);
+      }
     });
-    return () => unsubscribe(); // Cleanup listener on unmount
+  
+    return () => unsubscribe();
   }, []);
-
+  
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -65,7 +84,7 @@ const Navbar = () => {
             </button>
 
             <button 
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/profile/" + user.userName)}
               className={`px-3 py-1 rounded ${activeTab === "/profile" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
             >
               Profile

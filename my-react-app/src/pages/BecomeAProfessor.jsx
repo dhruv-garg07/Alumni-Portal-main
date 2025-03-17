@@ -27,7 +27,7 @@ const toastOptions = {
   theme: "dark",
 };
 
-const BecomeAMember = () => {
+const BecomeAProfessor = () => {
   const location = useLocation();
   const [isFormSubmitted, setIsFormSubmitted] = useState(0);
   const [ischeckbox, setIsWorkingProfessional] = useState(0);
@@ -40,6 +40,7 @@ const BecomeAMember = () => {
   const [editedUser, setEditedUser] = useState({
     name: '',
     phone: '',
+    userName: '',
     countryCode: '',
     college: '',
     designation: '',
@@ -124,7 +125,23 @@ const BecomeAMember = () => {
     }
   };
 
-
+const checkUsernameExists = async (username) => {
+    try {
+      const collectionsToCheck = ["Users", "Professors", "admin"]; // List of collections
+      for (const collectionName of collectionsToCheck) {
+        const q = query(collection(db, collectionName), where("userName", "==", username));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          return true; // Username exists in one of the collections
+        }
+      }
+      return false; // Username is available
+    } catch (error) {
+      console.error("Error checking username:", error);
+      return false; // Assume username does not exist on error
+    }
+  };
 
   const navigate = useNavigate();
   if (isAdmin === "true") {
@@ -164,6 +181,7 @@ const BecomeAMember = () => {
     e.preventDefault();
     const mandatoryFields = [
       "name",
+      "userName",
       "primaryemail",
       "phone",
       "countryCode",
@@ -192,6 +210,13 @@ const BecomeAMember = () => {
       setErrorMessage("Please enter a valid 10-digit phone number");
       return;
     }
+
+    const usernameExists = await checkUsernameExists(editedUser["userName"]);
+    if (usernameExists) {
+      setErrorMessage("Username is already taken. Please choose another.");
+      return;
+    }
+
     const colRef = collection(db, "Professors");
     const q = query(colRef, where("college", "==", editedUser["college"]));
     const snapshot = await getDocs(q);
@@ -801,6 +826,12 @@ const BecomeAMember = () => {
         <label>Full Name*</label>
         <input type="text" name="name" placeholder="Your Name" value={editedUser.name} onChange={handleInputChange} />
     </div>
+
+    <div className="form-group">
+        <label>UserName*</label>
+        <input type="text" name="userName" placeholder="Your Username" value={editedUser.userName} onChange={handleInputChange} />
+    </div>
+
     <div className="form-group">
         <label>College*</label>
         <input type="text" name="college" placeholder="College" value={editedUser.college} onChange={handleInputChange} />
@@ -808,16 +839,6 @@ const BecomeAMember = () => {
     <div className="form-group">
         <label>Year of Joining*</label>
         <input type="text" name="joiningYear" placeholder="Year of Joining" value={editedUser.joiningYear} onChange={handleInputChange} />
-    </div>
-    <div className="form-group">
-        <label>Designation*</label>
-        <select name="designation" value={editedUser.designation} onChange={handleInputChange}>
-            <option value="">Choose</option>
-            <option value="assistant">Assistant Professor</option>
-            <option value="associate">Associate Professor</option>
-            <option value="professor">Professor</option>
-            <option value="visiting">Visiting Faculty</option>
-        </select>
     </div>
 </div>
 
@@ -884,4 +905,4 @@ const BecomeAMember = () => {
   );
 };
 
-export default BecomeAMember;
+export default BecomeAProfessor;

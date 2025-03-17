@@ -39,6 +39,7 @@ const BecomeAMember = () => {
   const [editedUser, setEditedUser] = useState({
     name: '',
     phone: '',
+    userName: '',
     countryCode: '',
     college: '',
     country: '',
@@ -55,6 +56,7 @@ const BecomeAMember = () => {
     primaryemail: "",
     additional_degree: "",
     placeofposting: "",
+    additionalProfiles: "",
     suggestions: ""
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -127,7 +129,23 @@ const BecomeAMember = () => {
     }
   };
 
-
+  const checkUsernameExists = async (username) => {
+    try {
+      const collectionsToCheck = ["Users", "Professors", "admin"]; // List of collections
+      for (const collectionName of collectionsToCheck) {
+        const q = query(collection(db, collectionName), where("userName", "==", username));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          return true; // Username exists in one of the collections
+        }
+      }
+      return false; // Username is available
+    } catch (error) {
+      console.error("Error checking username:", error);
+      return false; // Assume username does not exist on error
+    }
+  };
 
   const navigate = useNavigate();
   if (isAdmin === "true") {
@@ -168,6 +186,7 @@ const BecomeAMember = () => {
     const mandatoryFields = [
       "name",
       "primaryemail",
+      "userName",
       "phone",
       "countryCode",
       "college",
@@ -181,7 +200,6 @@ const BecomeAMember = () => {
     ];
     const missingFields = mandatoryFields.filter((field) => !editedUser[field]);
     if (missingFields.length > 0) {
-      console.log("Country Code",editedUser.countryCode);
       console.log(missingFields);
       setErrorMessage("Please fill in all mandatory fields.");
       return;
@@ -218,6 +236,13 @@ const BecomeAMember = () => {
       setErrorMessage("Please enter a valid 10-digit phone number");
       return;
     }
+
+    const usernameExists = await checkUsernameExists(editedUser["userName"]);
+    if (usernameExists) {
+      setErrorMessage("Username is already taken. Please choose another.");
+      return;
+    }
+
     const colRef = collection(db, "Users");
     const q = query(colRef, where("primaryemail", "==", editedUser["primaryemail"]));
     const snapshot = await getDocs(q);
@@ -417,11 +442,11 @@ const BecomeAMember = () => {
   };
 
   const handleSignUpClick = async () => {
-    // const docRef = await addDoc(collection(db, "Users"), {
-    //   uid: userId,
-    //   email: email,
-    // });
-    const userDocRef = doc(db, "users", userId);
+    const docRef = await addDoc(collection(db, "Users"), {
+      uid: userId,
+      email: email,
+    });
+    // const userDocRef = doc(db, "users", userId);
     const colRef = collection(db, "Users");
     const q = query(colRef, where("email", "==", email));
 
@@ -827,6 +852,12 @@ const BecomeAMember = () => {
         <label>Full Name*</label>
         <input type="text" name="name" placeholder="Your Name" value={editedUser.name} onChange={handleInputChange} />
     </div>
+
+    <div className="form-group">
+        <label>UserName*</label>
+        <input type="text" name="userName" placeholder="Your Username" value={editedUser.userName} onChange={handleInputChange} />
+    </div>
+
     <div className="form-group">
         <label>College*</label>
         <input type="text" name="college" placeholder="College" value={editedUser.college} onChange={handleInputChange} />
@@ -910,6 +941,17 @@ const BecomeAMember = () => {
             <option value="dual">Dual Degree</option>
         </select>
     </div>
+    <div className="form-group">
+    <label>Additional Profiles</label>
+    <input 
+        type="text" 
+        name="additionalProfiles" 
+        className="text_input-member" 
+        placeholder="Enter profiles(like Github,linkedin)" 
+        value={editedUser.additionalProfiles} 
+        onChange={handleInputChange} 
+    />
+</div>
     <div className="form-group">
         <label>Any Inputs/Suggestions</label>
         <input type="text" name="suggestions" className="text_input-member" placeholder="Suggestions" value={editedUser.suggestions} onChange={handleInputChange} />

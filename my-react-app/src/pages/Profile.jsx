@@ -28,6 +28,7 @@ import {
 import {storage} from "../firebase.js"
 import DataList from '../components/DataList.jsx';
 import image from '../assets/profile_bck.png'
+import { useParams } from "react-router-dom";
 
 const Section = ({ title, children }) => {
 
@@ -58,7 +59,7 @@ const Section = ({ title, children }) => {
   };
 
 const Profile = () => {
-  
+    const { userName } = useParams();
     const [isEditing, setIsEditing] = useState(false);
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
@@ -69,6 +70,7 @@ const Profile = () => {
     const [editedUser, setEditedUser] = useState({
         name: '',
         phone: '',
+        userName: '',
         contrycode: '',
         entryNo: '',
         country: '',
@@ -88,6 +90,7 @@ const Profile = () => {
         additional_degree:"",
         por:"",
         placeofposting:"",
+        additionalProfiles: "",
         suggestions:""
   
     });
@@ -105,12 +108,10 @@ const Profile = () => {
         const fetchUserData = async () => {
             try {
                 console.log("trying to fetch");
-                const emailId = auth.currentUser.email;
-                console.log("emailid:  ", emailId);
                 
                 const colRef = collection(db, 'Users');
                 console.log(colRef);
-                const q = query(colRef, where('email', '==', emailId));
+                const q = query(colRef, where('userName', '==', userName));
                 
                 try {
                     const snapshot = await getDocs(q);
@@ -147,6 +148,7 @@ const Profile = () => {
         // Initialize editedUser with the fetched user data when entering edit mode
         setEditedUser({
             name: userData?.name || '',
+            userName: userData?.userName || '',
             email: userData?.email || '',
             phone: userData?.phone || '',
             institute: userData?.institute || '',
@@ -234,10 +236,10 @@ const Profile = () => {
 
     const handleSaveChanges = async () => {
         try {
-            const userId = auth.currentUser.uid;
+            const userId = auth.currentUser.userName;
             const userDocRef = doc(db, 'users', userId);
             const colRef = collection(db, 'Users');
-            const q = query(colRef, where('uid', '==', userId));
+            const q = query(colRef, where('userName', '==', userId));
 
             const querySnapshot = await getDocs(q);
 
@@ -346,6 +348,7 @@ const Profile = () => {
       
 
     const renderProfileDetails = () => {
+        console.log("Here is userData",userData);
         return (
             <div>
                 {userData ? (
@@ -366,7 +369,9 @@ const Profile = () => {
                       </div>
 
                       <div className='flex flex-col gap-2 mt-[100px] ml-[230px]'>
-                        <p className='font-bold text-[28px]'>{userData.name}</p>
+                      <p className='font-bold text-[28px]'>
+                            {userData.name || "Unknown"} {userData.userName && `(${userData.userName})`}
+                        </p>
                         <div className='flex flex-row gap-[35px]'>
                         <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlineEmail className='mt-1.5'/>{userData.email}</p>
                         <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlinePhone className='mt-1.5'/>{userData.phone}</p>
@@ -802,7 +807,7 @@ const Profile = () => {
                 
                         {isEditing ? renderEditProfileForm() : renderProfileDetails()};
 
-                        {!isEditing && (
+                        {!isEditing && auth.currentUser.userName == userName && (
                             <div className="p-2 flex justify-center">
                                 <button
                                     className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
