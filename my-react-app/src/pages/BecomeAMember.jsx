@@ -417,10 +417,10 @@ const BecomeAMember = () => {
   };
 
   const handleSignUpClick = async () => {
-    const docRef = await addDoc(collection(db, "Users"), {
-      uid: userId,
-      email: email,
-    });
+    // const docRef = await addDoc(collection(db, "Users"), {
+    //   uid: userId,
+    //   email: email,
+    // });
     const userDocRef = doc(db, "users", userId);
     const colRef = collection(db, "Users");
     const q = query(colRef, where("email", "==", email));
