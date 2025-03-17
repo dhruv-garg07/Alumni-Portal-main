@@ -29,6 +29,7 @@ import {storage} from "../firebase.js"
 import DataList from '../components/DataList.jsx';
 import image from '../assets/profile_bck.png'
 import { useParams } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 
 const Section = ({ title, children }) => {
 
@@ -65,6 +66,7 @@ const Profile = () => {
     const [endDate, setEndDate] = useState(new Date());
     const [userData, setUserData] = useState(null);
     const [profilePicture, setProfilePicture] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
     let dp = "/images/profile.jpeg";
     const [profileURL, setProfileURL] = useState(dp);
     const [editedUser, setEditedUser] = useState({
@@ -95,6 +97,33 @@ const Profile = () => {
   
     });
     
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (User) => {
+          if (User) {
+            const colRef = collection(db, 'Users');
+            console.log(colRef);
+            const q = query(colRef, where('uid', '==', User.uid));
+            const snapshot = await getDocs(q);
+            console.log("Snapshot:",snapshot);
+            if (snapshot.size>0) {
+              snapshot.forEach((doc) => {
+                console.log(doc.id, '=>', doc.data());
+                setCurrentUser(doc.data());
+            });
+            } else {
+              console.log("No user document found!");
+              setCurrentUser(User);
+            }
+          } else {
+            setCurrentUser(null);
+          }
+        });
+      
+        return () => unsubscribe();
+      }, []);
+      console.log("Current User:",currentUser);
+
     const navigate = useNavigate(); 
     const isAdmin = localStorage.getItem("isAdmin");
     const isProfessor = localStorage.getItem("isProfessor");
@@ -236,7 +265,7 @@ const Profile = () => {
 
     const handleSaveChanges = async () => {
         try {
-            const userId = auth.currentUser.userName;
+            const userId = currentUser.userName;
             const userDocRef = doc(db, 'users', userId);
             const colRef = collection(db, 'Users');
             const q = query(colRef, where('userName', '==', userId));
@@ -348,7 +377,10 @@ const Profile = () => {
       
 
     const renderProfileDetails = () => {
-        console.log("Here is userData",userData);
+        // console.log("Here is userData",currentUser);
+        // console.log("Here is current Username:",currentUser.userName);
+        // console.log("Here is userName:",userName);
+        
         return (
             <div>
                 {userData ? (
@@ -478,6 +510,7 @@ const Profile = () => {
     
 
     const renderEditProfileForm = () => {
+        
         return (
             <>
                 <div className='w-full mt-0 h-[50px] bg-gray-200 flex flex-row items-center justify-center text-[25px] font-bold'>
@@ -807,7 +840,7 @@ const Profile = () => {
                 
                         {isEditing ? renderEditProfileForm() : renderProfileDetails()};
 
-                        {!isEditing && auth.currentUser.userName == userName && (
+                        {!isEditing && currentUser!=null && currentUser.userName == userName && (
                             <div className="p-2 flex justify-center">
                                 <button
                                     className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
