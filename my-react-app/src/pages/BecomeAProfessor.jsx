@@ -43,7 +43,6 @@ const BecomeAProfessor = () => {
     userName: '',
     countryCode: '',
     college: '',
-    designation: '',
     department: '',
     joiningYear: '',
     work_exp: [{}],
@@ -186,7 +185,6 @@ const checkUsernameExists = async (username) => {
       "phone",
       "countryCode",
       "college",
-      "designation",
       "department",
       "joiningYear",
     ];
@@ -416,10 +414,10 @@ const checkUsernameExists = async (username) => {
   };
 
   const handleSignUpClick = async () => {
-    // const docRef = await addDoc(collection(db, "Professors"), {
-    //   uid: userId,
-    //   email: email,
-    // });
+    const docRef = await addDoc(collection(db, "Professors"), {
+      uid: userId,
+      email: email,
+    });
     const userDocRef = doc(db, "Professors", userId);
     const colRef = collection(db, "Professors");
     const q = query(colRef, where("email", "==", email));

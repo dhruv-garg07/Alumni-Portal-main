@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase.js";
-import { addDoc, getDoc, getDocs, collection, doc, updateDoc, query, where } from "firebase/firestore";
-
+import { collection, getDocs, query, where } from "firebase/firestore";
+import SearchBar from "./SearchBar.jsx";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const location = useLocation(); 
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.pathname);
-  const [searchQuery, setSearchQuery] = useState(""); 
-  const [user, setUser] = useState(null); // Track authentication state
+  const [user, setUser] = useState(null);
+  const [selectedProfessor, setSelectedProfessor] = useState(null);
 
-  // Update active tab when the route changes
+  // Update active tab when route changes
   useEffect(() => {
     setActiveTab(location.pathname);
   }, [location.pathname]);
@@ -21,28 +21,25 @@ const Navbar = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const colRef = collection(db, 'Users');
-        console.log(colRef);
-        const q = query(colRef, where('uid', '==', currentUser.uid));
+        const colRef = collection(db, "Users");
+        const q = query(colRef, where("uid", "==", currentUser.uid));
         const snapshot = await getDocs(q);
-        console.log("Snapshot:",snapshot);
-        if (snapshot.size>0) {
+
+        if (snapshot.size > 0) {
           snapshot.forEach((doc) => {
-            console.log(doc.id, '=>', doc.data());
             setUser(doc.data());
-        });
+          });
         } else {
-          console.log("No user document found!");
           setUser(currentUser);
         }
       } else {
         setUser(null);
       }
     });
-  
+
     return () => unsubscribe();
   }, []);
-  
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -56,44 +53,43 @@ const Navbar = () => {
     <div className="bg-white shadow-md px-6 py-3 flex justify-between items-center">
       {/* Left - Portal Title */}
       <h1 className="text-2xl font-bold text-gray-800">
-        <Link to="/" className="hover:underline">Faculty Portal</Link>
+        <Link to="/" className="hover:underline">
+          Faculty Portal
+        </Link>
       </h1>
 
       {/* Show full navbar only if user is logged in */}
       {user && (
         <>
           {/* Center - Search Bar */}
-          <div className="relative flex items-center w-1/3">
-            <span className="absolute left-3 text-gray-500">🔍</span>
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
+          <SearchBar onSelect={setSelectedProfessor} />
+
+          {/* Display Professor Card when selected */}
+          {selectedProfessor && (
+            <div className="mt-4 p-4 border border-gray-300 rounded-md shadow-md w-full">
+              <h2 className="text-xl font-bold">{selectedProfessor.name}</h2>
+              <p className="text-gray-600">Department: {selectedProfessor.department}</p>
+              <p className="text-gray-600">Email: {selectedProfessor.email}</p>
+            </div>
+          )}
 
           {/* Right - Navigation */}
           <div className="flex items-center space-x-6 text-gray-700">
-            <button 
+            <button
               onClick={() => navigate("/messages")}
               className={`px-3 py-1 rounded ${activeTab === "/messages" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
             >
               Messages
             </button>
 
-            <button 
+            <button
               onClick={() => navigate("/profile/" + user.userName)}
               className={`px-3 py-1 rounded ${activeTab === "/profile" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
             >
               Profile
             </button>
 
-            <button 
-              onClick={handleLogout} 
-              className="text-gray-600 hover:text-red-500"
-            >
+            <button onClick={handleLogout} className="text-gray-600 hover:text-red-500">
               Logout
             </button>
           </div>
