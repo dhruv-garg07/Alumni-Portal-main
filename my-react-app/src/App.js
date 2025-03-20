@@ -10,6 +10,7 @@ import PrivateRoute from './PrivateRoute';
 import Profile from './pages/Profile';
 import HomePage from './pages/HomePage';
 import Messages from './pages/Messages';
+import Connections from './pages/Connections'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route exact path="/becomeamember" element={<BecomeAMember />} />
           <Route exact path="/becomeaprofessor" element={<BecomeAProfessor />} />
           <Route exact path="/datalist" element={<DataList/>} />
+          <Route exact path="/connections" element={<Connections/>}/>
           <Route path="/home" element={<HomePage />} />
           <Route path="*" element={<Navigate to="/home" />}/>
         </Routes>

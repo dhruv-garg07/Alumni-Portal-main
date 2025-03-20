@@ -21,24 +21,33 @@ const Navbar = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const colRef = collection(db, "Users");
-        const q = query(colRef, where("uid", "==", currentUser.uid));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.size > 0) {
-          snapshot.forEach((doc) => {
-            setUser(doc.data());
-          });
-        } else {
-          setUser(currentUser);
+        try {
+          const collections = ["Users", "Professors", "admin"];
+          let userData = null;
+  
+          for (const collectionName of collections) {
+            const colRef = collection(db, collectionName);
+            const q = query(colRef, where("uid", "==", currentUser.uid));
+            const snapshot = await getDocs(q);
+  
+            if (!snapshot.empty) {
+              userData = snapshot.docs[0].data();
+              break; // Stop checking once a match is found
+            }
+          }
+  
+          setUser(userData || currentUser); // Fallback to auth user if not found in DB
+        } catch (error) {
+          console.error("Error fetching user data:", error);
         }
       } else {
         setUser(null);
       }
     });
-
+  
     return () => unsubscribe();
   }, []);
+  
 
   const handleLogout = async () => {
     try {
@@ -75,6 +84,14 @@ const Navbar = () => {
 
           {/* Right - Navigation */}
           <div className="flex items-center space-x-6 text-gray-700">
+         
+          <button
+              onClick={() => navigate("/connections")}
+              className={`px-3 py-1 rounded ${activeTab === "/connections" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
+            >
+              My Network
+            </button>
+            
             <button
               onClick={() => navigate("/messages")}
               className={`px-3 py-1 rounded ${activeTab === "/messages" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}

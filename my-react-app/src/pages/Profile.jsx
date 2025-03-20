@@ -30,6 +30,17 @@ import DataList from '../components/DataList.jsx';
 import image from '../assets/profile_bck.png'
 import { useParams } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+
+const toastOptions = {
+    position: "bottom-right",
+    autoClose: 8000,
+    pauseOnHover: true,
+    draggable: true,
+    theme: "dark",
+};
 
 const Section = ({ title, children }) => {
 
@@ -373,6 +384,7 @@ const Profile = () => {
     const handleSendConnectionRequest = async () => {
         if (!currentUser || !currentUser.userName) {
             console.error("User not logged in");
+            toast.error("Please login first",toastOptions);
             return;
         }
     
@@ -388,6 +400,7 @@ const Profile = () => {
             // Check if a request already exists
             if (!querySnapshot.empty) {
                 console.log("Connection request already sent!");
+                toast.success("Connection request already sent!",toastOptions);
                 return;
             }
     
@@ -400,8 +413,10 @@ const Profile = () => {
             });
     
             console.log("Connection request sent successfully!");
+            toast.success("Connection request sent successfully!",toastOptions);
         } catch (error) {
             console.error("Error sending connection request:", error);
+            toast.error("Failed to send connection request.",toastOptions);
         }
     };
     
@@ -1293,6 +1308,7 @@ const Profile = () => {
     return (
         
         <div>
+        <ToastContainer />
         {/* Admin View */}
         {urlIsAdmin === true ? (
             <>
