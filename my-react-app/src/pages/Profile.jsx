@@ -19,7 +19,7 @@ import { MdOutlineEmail } from "react-icons/md";
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { AiOutlineNumber, AiOutlineMail, AiOutlinePhone, AiFillLinkedin, AiOutlineHome  } from 'react-icons/ai';
-import { addDoc, getDoc, getDocs, collection, doc, updateDoc, query, where } from "firebase/firestore";
+import { addDoc, getDoc, getDocs, collection, doc, updateDoc, query, where, serverTimestamp } from "firebase/firestore";
 import {
     ref,
     uploadBytesResumable,
@@ -61,6 +61,7 @@ const Section = ({ title, children }) => {
 
 const Profile = () => {
     const { userName } = useParams();
+    
     const [isEditing, setIsEditing] = useState(false);
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
@@ -69,12 +70,14 @@ const Profile = () => {
     const [currentUser, setCurrentUser] = useState(null);
     let dp = "/images/profile.jpeg";
     const [profileURL, setProfileURL] = useState(dp);
+    const [urlIsProfessor, setUrlIsProfessor] = useState(false);
+    const [urlIsAdmin, setUrlIsAdmin] = useState(false);  
     const [editedUser, setEditedUser] = useState({
         name: '',
         phone: '',
         userName: '',
         contrycode: '',
-        entryNo: '',
+        college: '',
         country: '',
         hostel: '',
         linkedin: '',
@@ -136,39 +139,74 @@ const Profile = () => {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                console.log("trying to fetch");
-                
-                const colRef = collection(db, 'Users');
-                console.log(colRef);
-                const q = query(colRef, where('userName', '==', userName));
-                
-                try {
-                    const snapshot = await getDocs(q);
-                  
-                    if (snapshot.size > 0) {
-                      // Documents satisfying the query exis
-                      snapshot.forEach((doc) => {
-                        console.log(doc.id, '=>', doc.data());
+                console.log("Trying to fetch user data...");
+    
+                let foundUser = false;
+    
+                // First, check in Users collection
+                const userColRef = collection(db, "Users");
+                const userQuery = query(userColRef, where("userName", "==", userName));
+    
+                const userSnapshot = await getDocs(userQuery);
+    
+                if (!userSnapshot.empty) {
+                    userSnapshot.forEach((doc) => {
+                        console.log("User found in Users collection:", doc.data());
                         setUserData(doc.data());
-                        setProfileURL(doc.data()['profileURL']);
-                        console.log("profile url",profileURL);
+                        setProfileURL(doc.data().profileURL || "/images/profile.jpeg");
+                        setUrlIsProfessor(false);  // ✅ Not a professor
+                        setUrlIsAdmin(false);      // ✅ Not an admin
                     });
-                    } else {
-                      console.log('No documents found for the given query.');
-                    }
-                } catch (error) {
-                    console.error('Error getting documents:', error);
+                    foundUser = true;
                 }
-                
+    
+                // If not found in Users, check Professors collection
+                if (!foundUser) {
+                    console.log("User not found in Users collection. Checking Professors...");
+    
+                    const profColRef = collection(db, "Professors");
+                    const profQuery = query(profColRef, where("userName", "==", userName));
+    
+                    const profSnapshot = await getDocs(profQuery);
+    
+                    if (!profSnapshot.empty) {
+                        profSnapshot.forEach((doc) => {
+                            console.log("User found in Professors collection:", doc.data());
+                            setUserData(doc.data());
+                            setProfileURL(doc.data().profileURL || "/images/profile.jpeg");
+                            setUrlIsProfessor(true);   // ✅ Mark as Professor
+                            setUrlIsAdmin(false);      // ✅ Not an admin
+                        });
+                        foundUser = true;
+                    }
+                }
+    
+                // If not found in Users or Professors, check Admins collection
+                if (!foundUser) {
+                    console.log("User not found in Professors collection. Checking Admins...");
+    
+                    const adminColRef = collection(db, "Admins");
+                    const adminQuery = query(adminColRef, where("userName", "==", userName));
+    
+                    const adminSnapshot = await getDocs(adminQuery);
+    
+                    if (!adminSnapshot.empty) {
+                        console.log("User found in Admins collection.");
+                        setUrlIsAdmin(true);  // ✅ Mark as Admin
+                    } else {
+                        console.log("User not found in Admins collection either.");
+                    }
+                }
+    
             } catch (error) {
-                console.error('Error fetching user data:', error);
-                console.log("error in fetching data from firebase");
+                console.error("Error fetching user data:", error);
             }
         };
-
+    
         fetchUserData();
-    }, []); // Empty dependency array to ensure the effect runs only once on mount
-
+    }, [userName]); // ✅ Runs when userName changes
+    
+    
     
 
     const handleEditClick = () => {
@@ -181,7 +219,7 @@ const Profile = () => {
             email: userData?.email || '',
             phone: userData?.phone || '',
             institute: userData?.institute || '',
-            entryNo: userData?.entryNo || '',
+            college: userData?.college || '',
             linkedin: userData?.linkedin || '',
             degree: userData?.degree || '',
             department: userData?.department || '',
@@ -278,7 +316,7 @@ const Profile = () => {
                 const docRef = doc(db, 'Users', querySnapshot.docs[0].id);
                 
                 if (profilePicture) {
-                    const storageRef = ref(storage,`/files/${userData.entryNo}`)
+                    const storageRef = ref(storage,`/files/${userData.college}`)
                     console.log("stor ref: ",storageRef);
                     const uploadTask = uploadBytesResumable(storageRef, profilePicture);
                 
@@ -331,6 +369,43 @@ const Profile = () => {
         }
         return years;
     };
+
+    const handleSendConnectionRequest = async () => {
+        if (!currentUser || !currentUser.userName) {
+            console.error("User not logged in");
+            return;
+        }
+    
+        try {
+            const connectionRequestRef = collection(db, "connectionRequests"); // Reference to connectionRequests collection
+            const querySnapshot = await getDocs(
+                query(connectionRequestRef, 
+                    where("sender", "==", currentUser.userName),
+                    where("receiver", "==", userName)
+                )
+            );
+    
+            // Check if a request already exists
+            if (!querySnapshot.empty) {
+                console.log("Connection request already sent!");
+                return;
+            }
+    
+            // If no duplicate request exists, add a new request
+            await addDoc(connectionRequestRef, {
+                sender: currentUser.userName,
+                receiver: userName,
+                status: "pending", // Mark request as pending
+                timestamp: serverTimestamp() // Store request time
+            });
+    
+            console.log("Connection request sent successfully!");
+        } catch (error) {
+            console.error("Error sending connection request:", error);
+        }
+    };
+    
+    
 
     // Define arrays for course and specialization options
     const courseOptions = ["B.Tech", "M.tech", "Ph.D.", "BSc", "MSc", "Dual Degree"];
@@ -418,10 +493,10 @@ const Profile = () => {
                       
 
     <Section title="Basic Details">
-        <div className="flex flex-row gap-[50px]">
-          <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
-            <p className="font-semibold">Entry Number:</p>
-            <p className="font-normal">{userData.entryNo}</p>
+        <div className="flex flex-row gap-[160px]">
+          <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
+            <p className="font-semibold">College:</p>
+            <p className="font-normal">{userData.college}</p>
           </div>
           <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
             <p className="font-semibold">Degree:</p>
@@ -429,7 +504,7 @@ const Profile = () => {
           </div>
         </div>
         <div className="flex flex-row gap-[160px]">
-          <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
+          <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
             <p className="font-semibold">Department:</p>
             <p className="font-normal">{userData.department}</p>
           </div>
@@ -507,7 +582,85 @@ const Profile = () => {
         );
     };
 
-    
+    const renderProfileDetailsProfessor = () => {
+        // console.log("Here is userData",currentUser);
+        // console.log("Here is current Username:",currentUser.userName);
+        // console.log("Here is userName:",userName);
+        console.log("Inside Professors view");
+        return (
+            <div>
+                {userData ? (
+                    <>
+                      <div className='relative w-full h-[300px] mt-0'>
+                      <div
+                          className='absolute inset-0 bg-cover bg-center'
+                          style={{ backgroundImage: `url(${image})` }}
+                      ></div>
+                      <div className='absolute w-[200px] h-[200px] bg-white rounded-full border-4 border-white top-[300px] left-[300px] transform -translate-x-1/2 -translate-y-1/2'></div>
+                      <div className='absolute w-[180px] h-[180px] bg-gray-300 rounded-full top-[300px] left-[300px] transform -translate-x-1/2 -translate-y-1/2 overflow-hidden border border-black'>
+                          <img
+                         src={profileURL}
+                          alt='Photo'
+                          className='object-cover w-full h-full'
+                          />
+                      </div>
+                      </div>
+
+                      <div className='flex flex-col gap-2 mt-[100px] ml-[230px]'>
+                      <p className='font-bold text-[28px]'>
+                            {userData.name || "Unknown"} {userData.userName && `(${userData.userName})`}
+                        </p>
+                        <div className='flex flex-row gap-[35px]'>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlineEmail className='mt-1.5'/>{userData.email}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlinePhone className='mt-1.5'/>{userData.phone}</p>
+                        </div>
+                        <div className='flex flex-row gap-[35px]'>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><AiOutlineLinkedin className='mt-1.5'/>{userData.linkedin}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><IoLocationOutline className='mt-1.5'/>{userData.placeofposting}</p>
+                        </div>
+                        <div className='flex flex-row gap-[35px]'>
+                        {currentUser?.userName !== userName && (
+                        <div className="mt-1.5">  
+                            <button
+                                className="bg-blue-600 text-white px-4 py-2 rounded-md text-lg font-semibold hover:bg-blue-700 transition-all"
+                                onClick={handleSendConnectionRequest}
+                            >
+                                Request Connection
+                            </button>
+                        </div>
+                    )}
+
+                        </div>
+                      </div>
+
+                      <div className='flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8'></div>
+                      
+
+    <Section title="Basic Details">
+        <div className="flex flex-row gap-[160px]">
+          <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
+            <p className="font-semibold">College:</p>
+            <p className="font-normal">{userData.college}</p>
+          </div>
+          <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
+            <p className="font-semibold">Department:</p>
+            <p className="font-normal">{userData.department}</p>
+          </div>
+        </div>
+      </Section>
+
+      <div className="flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8"></div>
+
+      
+                </>
+            ): (
+                        <p>Loading user data...</p>
+                    )}
+            
+
+        </div>
+            );
+    };
 
     const renderEditProfileForm = () => {
         
@@ -553,9 +706,9 @@ const Profile = () => {
                         <div className="mb-1">
                             <input
                                 type="text"
-                                name="entryNo"
-                                placeholder="Entry Number"
-                                value={editedUser.entryNo}
+                                name="college"
+                                placeholder="College"
+                                value={editedUser}
                                 onChange={handleInputChange}
                                 className="w-[400px] ml-[20px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 font-normal text-[20px] bg-slate-100"
                             />
@@ -685,7 +838,320 @@ const Profile = () => {
                                         <input
                                             type="text"
                                             name="endYear"
+                                            placeholder='End Year'
+                                            value={highEdu.endYear || ''}
+                                            onChange={(e) => handleInputChangeHigherEdu(e, index)}
+                                            className="w-[200px] px-4 py-2 mb-2 border border-gray-500 bg-slate-100 rounded-md focus:outline-none focus:border-indigo-500 ml-[100px]"
+                                        />
+                                    </div>
+                                
+
+                                    <div className='flex flex-row space-x-1 ml-[100px]'>
+                                        <select
+                                            name="degree"
+                                            value={highEdu.degree || ''}
+                                            onChange={(e) => handleInputChangeHigherEdu(e, index)}
+                                            className="w-1/1.5 px-4 py-2 mb-2 border border-gray-500 bg-slate-100 rounded-md focus:outline-none focus:border-indigo-500"
+                                        >
+                                            <option value="">Course</option>
+                                            {courseOptions.map((option, i) => (
+                                                <option key={i} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            name="department"
+                                            value={highEdu.department || ''}
+                                            onChange={(e) => handleInputChangeHigherEdu(e, index)}
+                                            className="w-[350px] px-4 py-2 mb-2 border border-gray-500 bg-slate-100 rounded-md focus:outline-none focus:border-indigo-500 "
+                                        >
+                                            <option value="">Department</option>
+                                            {specializationOptions.map((option, i) => (
+                                                <option key={i} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={() => handleRemoveHighEdu(index)}
+                                        className="px-4 py-2  mt-3 hover:bg-slate-300 text-slate-700 rounded-md focus:outline-none border-4 border-indigo-900 transition duration-200 hover:rounded-full ml-[100px]"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+
+                            <div className='flex flex-row justify-center'>
+                                
+                                <button 
+                                    onClick={handleAddHighEdu}
+                                    className="px-4 py-2 mb-[30px] ml-[35px] border-4 border-indigo-900  text-slate-700 rounded-md focus:outline-none  transition duration-200 hover:rounded-full hover:bg-slate-300"
+                                >
+                                    Add Higher Education
+                                </button>
+                            </div>
+
+                        </div>
+                        </div>
+
+                        <div className='shadow-xl w-[600px] mr-[120px] mt-[30px] flex flex-col items-center bg-slate-300 rounded-3xl'>
+                            <div className='flex flex-col  '>
+                            <div className="flex flex-row items-center ml-[150px]  justify-center mt-5 w-[320px] h-[50px] rounded-full bg-indigo-900 text-white">
+                            <h3 className="text-3xl font-bold ">Work Experience</h3>
+                        </div>
+                                {editedUser.work_exp.map((workExp, index) => (
+                                    <div key={index} className=" ml-[70px] bg-opacity-0.8 rounded-md p-4">
+                                        <input
+                                            type="text"
+                                            name="job_title"
+                                            placeholder="Job Title"
+                                            value={workExp.job_title || ''}
+                                            onChange={(e) => handleInputChangeWorkExp(e, index)}
+                                            className="w-[450px] border-gray-500 bg-slate-100 px-4 py-2 mb-2 border rounded-md focus:outline-none focus:border-indigo-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="company"
+                                            placeholder="Company"
+                                            value={workExp.company || ''}
+                                            onChange={(e) => handleInputChangeWorkExp(e, index)}
+                                            className="w-[450px] border-gray-500 bg-slate-100 px-4 py-2 mb-2 border rounded-md focus:outline-none focus:border-indigo-500 mt-3"
+                                        />
+                                        <div className="flex flex-row mb-2 space-x-4 mt-3">
+                                            <input
+                                                type="text"
+                                                name="startYear"
+                                                placeholder='Start Year'
+                                                value={workExp.startYear || ''}
+                                                onChange={(e) => handleInputChangeWorkExp(e, index)}
+                                                className="w-[200px]  border-gray-500 bg-slate-100 px-4 py-2 mb-2 border rounded-md focus:outline-none focus:border-indigo-500"
+                                            />
+                                            <input
+                                                type="text"
+                                                name="endYear"
+                                                placeholder='Start Year'
+                                                value={workExp.endYear || ''}
+                                                onChange={(e) => handleInputChangeWorkExp(e, index)}
+                                                className="w-[200px] border-gray-500  bg-slate-100 px-4 py-2 mb-2 border rounded-md focus:outline-none focus:border-indigo-500"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemoveWorkExp(index)}
+                                            className="px-4 py-2 hover:bg-slate-300 text-slate-700 rounded-md focus:outline-none   hover:rounded-full transition duration-200 mt-3 border-4 border-indigo-900"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                                <div className='flex flex-row justify-center'>
+                                   
+                                    <button 
+                                        onClick={handleAddWorkExp}
+                                        className="px-4 py-2 mb-[30px] ml-[35px] border-4 border-indigo-900  text-slate-700 rounded-md focus:outline-none  transition duration-200 hover:rounded-full hover:bg-slate-300"
+                                    >
+                                        Add Work Experience
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                        
+
+                    
+                    <div className="mb-4 p-1 flex justify-center mt-10">
+                        <button
+                            className="bg-slate-100 text-slate-700 px-6 py-3 border-4 border-indigo-900 rounded-lg hover:rounded-full hover:bg-indigo-950 text-lg font-semibold hover:text-white"
+                            onClick={handleSaveChanges}
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                
+            </>
+            
+        );
+    };
+
+    const renderEditProfileFormProfessor = () => {
+        
+        return (
+            <>
+                <div className='w-full mt-0 h-[50px] bg-gray-200 flex flex-row items-center justify-center text-[25px] font-bold'>
+                    Edit Profile
+                </div>
+
+                
+                    
+                    <div className='flex flex-col flex-grow mb-8 md:w-1/3 '>
+                    
+                    <div className='shadow-xl w-[1250px] ml-[140px] mt-[30px] flex flex-col items-center bg-slate-300 rounded-3xl'>
+                        <div className="flex flex-row items-center  justify-center mb-2 mt-5 w-[220px] h-[50px] rounded-full bg-indigo-900 text-white">
+                            <h3 className="text-3xl font-bold ">Basic Details</h3>
+                        </div>
+
+                        <div className='  flex flex-row mt-4 '>
+                            <form>
+                                <h2 className='ml-[20px]'>Upload Profile Photo</h2>
+                                <input 
+                                    name= "profilepic" 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={handleProfilePictureChange} 
+                                    className='border border-gray-500 ml-[20px] w-[400px] bg-slate-100'
+                                />
+                            </form>
+                            <div className="mb-1">
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="Name"
+                                    value={editedUser.name}
+                                    onChange={handleInputChange}
+                                    className="w-[450px] px-4 py-2 mb-4 text-[20px] font-normal border border-gray-500 bg-slate-100 rounded-md focus:outline-none focus:border-indigo-500 ml-[200px] mt-5"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className='  flex flex-row '>
+                        <div className="mb-1">
+                            <input
+                                type="text"
+                                name="college"
+                                placeholder="College"
+                                value={editedUser}
+                                onChange={handleInputChange}
+                                className="w-[400px] ml-[20px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 font-normal text-[20px] bg-slate-100"
+                            />
+                        </div>
+
+                        <div className="mb-1">
+                            <input
+                                type="text"
+                                name="degree"
+                                placeholder="Degree"
+                                value={editedUser.degree}
+                                onChange={handleInputChange}
+                                className="w-[450px] ml-[200px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 overflow-y-auto font-normal text-[20px] bg-slate-100"
+                            />
+                        </div>
+                        </div>
+
+                        <div className='  flex flex-row '>
+                        <div className="mb-1">
+                            <input
+                                type="text"
+                                name="department"
+                                placeholder="Department"
+                                value={editedUser.department}
+                                onChange={handleInputChange}
+                                className="w-[400px] ml-[20px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 overflow-y-auto font-normal text-[20px] bg-slate-100"
+                            />
+                        </div>
+
+                        <div className="mb-1">
+                            <select
+                                type="year"
+                                name="passingYear"
+                                value={editedUser.passingYear}
+                                onChange={handleInputChange}
+                                className="w-[450px] ml-[200px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 font-normal text-[20px] bg-slate-100"
+                            >
+                                <option value="">Select Year of Passing</option>
+                                {renderYearOptions()}
+                            </select>
+                        </div>
+                        </div>
+
+                        <div className="mb-1">
+                            <input
+                                type="url"
+                                name="linkedin"
+                                placeholder="LinkedIN URL"
+                                value={editedUser.linkedin}
+                                onChange={handleInputChange}
+                                className="w-[400px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 overflow-y-auto font-normal text-[20px] bg-slate-100 "
+                            />
+                        </div>
+                    </div>
+                  
+       
+                    <div className='shadow-xl w-[950px] ml-[290px] mt-[30px] flex flex-col items-center bg-slate-300 rounded-3xl'>
+                        <div className="flex flex-row items-center  justify-center mb-2 mt-5 w-[320px] h-[50px] rounded-full bg-indigo-900 text-white">
+                            <h3 className="text-3xl font-bold ">Contact Information</h3>
+                        </div>
+                        <div className="flex flex-row mb-1 ">
+                            <select
+                                name="countryCode"
+                                value={editedUser.countryCode}
+                                onChange={handleInputChange}
+                                className="w-1/1.5 px-4 py-2 mr-2 border border-gray-500 bg-slate-100 rounded-md focus:outline-none focus:border-indigo-500"
+                            >
+                                <option value="">Country Code</option>
+                                {countryCodeOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <input
+                                type="text"
+                                name="phone"
+                                placeholder="Phone No."
+                                value={editedUser.phone}
+                                onChange={handleInputChange}
+                                className="w-[400px] px-4 bg-slate-100 py-2 border border-gray-500 font-normal text-[20px] rounded-md focus:outline-none focus:border-indigo-500 "
+                            />
+                        </div>
+
+                        <div className="mb-1 mt-3 ">
+                            <input
+                                type="text"
+                                name="address"
+                                placeholder="Address"
+                                value={editedUser.address}
+                                onChange={handleInputChange}
+                                className="w-[700px] h-[100px] px-4 py-2 mb-4 border border-gray-500 rounded-md focus:outline-none focus:border-indigo-500 font-normal text-[15px] bg-slate-100 "
+                            />
+                        </div>
+                   </div>
+                  
+
+                    </div>
+                    
+                    
+                        <div className='flex flex-row'>
+                        <div className='flex flex-col flex-grow'>
+                        <div className='shadow-xl w-[600px] ml-[140px] mt-[30px] flex flex-col items-center bg-slate-300 rounded-3xl'>
+                        <div className="flex flex-row items-center  justify-center mb-2 mt-5 w-[320px] h-[50px] rounded-full bg-indigo-900 text-white">
+                            <h3 className="text-3xl font-bold ">Higher Education</h3>
+                        </div>
+                            {editedUser.higherEducation.map((highEdu, index) => (
+                                <div key={index} className="mb-4   bg-opacity-0.8 rounded-md p-4 mr-[50px]">
+                                    
+                                    <input
+                                        type="text"
+                                        name="institute"
+                                        placeholder="Name of Institute"
+                                        value={highEdu.institute || ''}
+                                        onChange={(e) => handleInputChangeHigherEdu(e, index)}
+                                        className="w-[400px] ml-[100px] px-4 py-2 mb-2 border bg-slate-100 border-gray-500 rounded-md focus:outline-none focus:border-indigo-500"
+                                    />
+                                    <div className="flex flex-row mb-2 space-x-4 mt-3">
+                                        <input
+                                            type="text"
+                                            name="startYear"
                                             placeholder='Start Year'
+                                            value={highEdu.startYear || ''}
+                                            onChange={(e) => handleInputChangeHigherEdu(e, index)}
+                                            className="w-[200px] ml-[100px] px-4 py-2 mb-2 border bg-slate-100 border-gray-500 rounded-md focus:outline-none focus:border-indigo-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="endYear"
+                                            placeholder='End Year'
                                             value={highEdu.endYear || ''}
                                             onChange={(e) => handleInputChangeHigherEdu(e, index)}
                                             className="w-[200px] px-4 py-2 mb-2 border border-gray-500 bg-slate-100 rounded-md focus:outline-none focus:border-indigo-500 ml-[100px]"
@@ -826,44 +1292,61 @@ const Profile = () => {
 
     return (
         
-       
-            <div >
-            {/* <div className="w-[100%] max-w-[10000px] h-full mx-auto mt-0 p-6 bg-none rounded-md overflow-hidden shadow-md flex flex-col"> */}
-            
-                {isAdmin==="true" ? (
-                    <>
-                        <DataList selectedOption={selectedOption} setSelectedOption={setSelectedOption}/>
-                    </>
-                ) : (
-                    
-                    <>
-                
-                        {isEditing ? renderEditProfileForm() : renderProfileDetails()};
-
-                        {!isEditing && currentUser!=null && currentUser.userName == userName && (
-                            <div className="p-2 flex justify-center">
-                                <button
-                                    className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
-                                    onClick={handleEditClick}
-                                    disabled={isEditing}
-                                >
-                                    Edit Profile
-                                </button>
-                                <button
-                                    className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold"
-                                    onClick={() => navigate("/AlumniCard")} // Wrap navigate function call in an arrow function
-                                >
-                                    Smart ID Card
-                                </button>
-                            </div>
-                        )};
-
-                    </>
-
+        <div>
+        {/* Admin View */}
+        {urlIsAdmin === true ? (
+            <>
+                {/* <h2 className="text-xl font-bold text-center">Admin Panel</h2> */}
+                {isEditing ? renderEditProfileForm() : renderProfileDetails()}
+                {!isEditing && currentUser !== null && currentUser.userName === userName && (
+                    <div className="p-2 flex justify-center">
+                        <button
+                            className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
+                            onClick={handleEditClick}
+                            disabled={isEditing}
+                        >
+                            Edit Profile
+                        </button>
+                    </div>
                 )}
-
-            </div>
-       
+            </>
+        ) : urlIsProfessor === true ? (
+            <>
+                {/* <h2 className="text-xl font-bold text-center">Professor Profile</h2> */}
+                {isEditing ? renderEditProfileFormProfessor() : renderProfileDetailsProfessor()}
+                {!isEditing && currentUser !== null && currentUser.userName === userName && (
+                    <div className="p-2 flex justify-center">
+                        <button
+                            className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
+                            onClick={handleEditClick}
+                            disabled={isEditing}
+                        >
+                            Edit Profile
+                        </button>
+                    </div>
+                )}
+            </>
+        ) : (
+            <>
+                {/* User Profile View */}
+                {/* <h2 className="text-xl font-bold text-center">User Profile</h2> */}
+                {isEditing ? renderEditProfileForm() : renderProfileDetails()}
+                {!isEditing && currentUser !== null && currentUser.userName === userName && (
+                    <div className="p-2 flex justify-center">
+                        <button
+                            className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
+                            onClick={handleEditClick}
+                            disabled={isEditing}
+                        >
+                            Edit Profile
+                        </button>
+                    </div>
+                )}
+            </>
+        )}
+    </div>
+    
+             
     );
 }
 

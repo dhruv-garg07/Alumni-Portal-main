@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -11,7 +11,7 @@ const SearchBar = () => {
   // Fetch matching professors from Firestore
   const fetchSuggestions = async (queryText) => {
     if (!queryText.trim()) {
-      setSuggestions([]);
+      setSuggestions([]); // Clear suggestions if input is empty
       return;
     }
 
@@ -30,11 +30,17 @@ const SearchBar = () => {
     setSuggestions(results);
   };
 
+  // Debounce effect: Waits 500ms before fetching suggestions
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      fetchSuggestions(searchQuery);
+    }, 100);
+
+    return () => clearTimeout(delayDebounce); // Cleanup on re-run
+  }, [searchQuery]);
+
   const handleInputChange = (e) => {
-    const queryText = e.target.value;
-    console.log("Query:", queryText);
-    setSearchQuery(queryText);
-    fetchSuggestions(queryText);
+    setSearchQuery(e.target.value);
   };
 
   const handleSelectProfessor = (professor) => {
