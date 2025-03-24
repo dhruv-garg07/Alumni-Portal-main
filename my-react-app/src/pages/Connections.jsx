@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc,deleteDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
 import { toast } from "react-toastify";
@@ -61,68 +61,103 @@ const Connections = () => {
   }, []);
 
   useEffect(() => {
-    console.log("Inside fetch connections:",user);
+    console.log("Inside fetch connections:", user);
     if (!user || !user.userName) return;
 
-    const fetchConnections = async () => {
+    const fetchConnectionsAndRequests = async () => {
         try {
-          const connectionRef = collection(db, "connectionRequests");
-      
-          const confirmedQuery1 = query(
-            connectionRef,
-            where("status", "==", "accepted"),
-            where("receiver", "==", user.userName)
-          );
-      
-          const confirmedQuery2 = query(
-            connectionRef,
-            where("status", "==", "accepted"),
-            where("sender", "==", user.userName)
-          );
-      
-          const [confirmedSnapshot1, confirmedSnapshot2] = await Promise.all([
-            getDocs(confirmedQuery1),
-            getDocs(confirmedQuery2)
-          ]);
-      
-          const allConnections = [
-            ...confirmedSnapshot1.docs.map(doc => ({ id: doc.id, connectionName: doc.data().sender, uid: doc.data().senderUid })),
-            ...confirmedSnapshot2.docs.map(doc => ({ id: doc.id, connectionName: doc.data().receiver, uid: doc.data().receiverUid }))
-          ];
-      
-          // Fetch college info from the correct collection
-          const fetchCollegeInfo = async (userNameParam) => {
-            const collections = ["Users", "Professors", "admin"];
-            console.log("User Name for incoming request:",userNameParam);
-            for (const collectionName of collections) {
-              const colRef = collection(db, collectionName);
-              const q = query(colRef, where("userName", "==", userNameParam));
-              const snapshot = await getDocs(q);
-              if (!snapshot.empty) return snapshot.docs[0].data().college; // Return college if found
-            }
-            return "Unknown College"; // Default if not found
-          };
-      
-          // Fetch colleges in parallel
-          const connectionsWithColleges = await Promise.all(
-            allConnections.map(async (conn) => ({
-              ...conn,
-              college: await fetchCollegeInfo(conn.connectionName)
-            }))
-          );
-      
-          setConnections(connectionsWithColleges);
-        } catch (error) {
-          console.error("Error fetching connections:", error);
-        }
-      };
-      
-      
+            const connectionRef = collection(db, "connectionRequests");
 
-    fetchConnections();
-    const interval = setInterval(fetchConnections, 10000);
+            // Queries for accepted connections
+            const confirmedQuery1 = query(
+                connectionRef,
+                where("status", "==", "accepted"),
+                where("receiver", "==", user.userName)
+            );
+
+            const confirmedQuery2 = query(
+                connectionRef,
+                where("status", "==", "accepted"),
+                where("sender", "==", user.userName)
+            );
+
+            // Query for pending connection requests (where the user is the receiver)
+            const pendingQuery = query(
+                connectionRef,
+                where("status", "==", "pending"),
+                where("receiver", "==", user.userName)
+            );
+
+            // Fetch data concurrently
+            const [confirmedSnapshot1, confirmedSnapshot2, pendingSnapshot] = await Promise.all([
+                getDocs(confirmedQuery1),
+                getDocs(confirmedQuery2),
+                getDocs(pendingQuery)
+            ]);
+
+            // Extract accepted connections
+            const allConnections = [
+                ...confirmedSnapshot1.docs.map(doc => ({
+                    id: doc.id,
+                    connectionName: doc.data().sender,
+                    uid: doc.data().senderUid
+                })),
+                ...confirmedSnapshot2.docs.map(doc => ({
+                    id: doc.id,
+                    connectionName: doc.data().receiver,
+                    uid: doc.data().receiverUid
+                }))
+            ];
+
+            // Extract pending requests
+            const allPendingRequests = pendingSnapshot.docs.map(doc => ({
+                id: doc.id,
+                sender: doc.data().sender,
+                senderUid: doc.data().senderUid
+            }));
+
+            // Fetch college info for both connections and pending requests
+            const fetchCollegeInfo = async (userNameParam) => {
+                const collections = ["Users", "Professors", "admin"];
+                console.log("Fetching college for:", userNameParam);
+                for (const collectionName of collections) {
+                    const colRef = collection(db, collectionName);
+                    const q = query(colRef, where("userName", "==", userNameParam));
+                    const snapshot = await getDocs(q);
+                    if (!snapshot.empty) return snapshot.docs[0].data().college;
+                }
+                return "Unknown College";
+            };
+
+            // Fetch colleges in parallel
+            const connectionsWithColleges = await Promise.all(
+                allConnections.map(async (conn) => ({
+                    ...conn,
+                    college: await fetchCollegeInfo(conn.connectionName)
+                }))
+            );
+
+            const pendingRequestsWithColleges = await Promise.all(
+                allPendingRequests.map(async (req) => ({
+                    ...req,
+                    college: await fetchCollegeInfo(req.sender)
+                }))
+            );
+
+            // Update state
+            setConnections(connectionsWithColleges);
+            setPendingRequests(pendingRequestsWithColleges);
+
+        } catch (error) {
+            console.error("Error fetching connections and pending requests:", error);
+        }
+    };
+
+    fetchConnectionsAndRequests();
+    const interval = setInterval(fetchConnectionsAndRequests, 10000);
     return () => clearInterval(interval);
-  }, [user]);
+}, [user]);
+
 
   const handleAcceptRequest = async (id) => {
     try {
@@ -156,7 +191,7 @@ const Connections = () => {
   const handleRemoveConnection = async (id) => {
     try {
       const requestRef = doc(db, "connectionRequests", id);
-      await updateDoc(requestRef, { status: "removed" });
+      await deleteDoc(requestRef); // Delete the document from Firestore
       setConnections((prev) => prev.filter((conn) => conn.id !== id));
       toast.info("Connection removed");
     } catch (error) {

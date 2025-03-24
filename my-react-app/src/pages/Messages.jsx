@@ -122,14 +122,6 @@ const MessagesPage = () => {
           ))}
         </div>
 
-        <div className="mt-4">
-          <button className="w-full p-2 bg-green-500 text-white rounded mb-2" onClick={() => console.log("Add Professor")}>
-            Add Professor
-          </button>
-          <button className="w-full p-2 bg-blue-500 text-white rounded" onClick={() => console.log("View Connection Requests")}>
-            Connection Requests
-          </button>
-        </div>
       </div>
 
       {/* Chat Window */}

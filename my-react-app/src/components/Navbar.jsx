@@ -68,50 +68,65 @@ const Navbar = () => {
       </h1>
 
       {/* Show full navbar only if user is logged in */}
-      {user && (
-        <>
-          {/* Center - Search Bar */}
-          <SearchBar onSelect={setSelectedProfessor} />
+      {user ? (
+  <>
+    {/* Center - Search Bar */}
+    <SearchBar onSelect={setSelectedProfessor} />
 
-          {/* Display Professor Card when selected */}
-          {selectedProfessor && (
-            <div className="mt-4 p-4 border border-gray-300 rounded-md shadow-md w-full">
-              <h2 className="text-xl font-bold">{selectedProfessor.name}</h2>
-              <p className="text-gray-600">Department: {selectedProfessor.department}</p>
-              <p className="text-gray-600">Email: {selectedProfessor.email}</p>
-            </div>
-          )}
+    {/* Display Professor Card when selected */}
+    {selectedProfessor && (
+      <div className="mt-4 p-4 border border-gray-300 rounded-md shadow-md w-full">
+        <h2 className="text-xl font-bold">{selectedProfessor.name}</h2>
+        <p className="text-gray-600">Department: {selectedProfessor.department}</p>
+        <p className="text-gray-600">Email: {selectedProfessor.email}</p>
+      </div>
+    )}
 
-          {/* Right - Navigation */}
-          <div className="flex items-center space-x-6 text-gray-700">
-         
-          <button
-              onClick={() => navigate("/connections")}
-              className={`px-3 py-1 rounded ${activeTab === "/connections" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
-            >
-              My Network
-            </button>
-            
-            <button
-              onClick={() => navigate("/messages")}
-              className={`px-3 py-1 rounded ${activeTab === "/messages" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
-            >
-              Messages
-            </button>
+    {/* Right - Navigation */}
+    <div className="flex items-center space-x-6 text-gray-700">
+      <button
+        onClick={() => navigate("/connections")}
+        className={`px-3 py-1 rounded ${
+          activeTab === "/connections" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"
+        }`}
+      >
+        My Network
+      </button>
 
-            <button
-              onClick={() => navigate("/profile/" + user.userName)}
-              className={`px-3 py-1 rounded ${activeTab === "/profile" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"}`}
-            >
-              Profile
-            </button>
+      <button
+        onClick={() => navigate("/messages")}
+        className={`px-3 py-1 rounded ${
+          activeTab === "/messages" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"
+        }`}
+      >
+        Messages
+      </button>
 
-            <button onClick={handleLogout} className="text-gray-600 hover:text-red-500">
-              Logout
-            </button>
-          </div>
-        </>
-      )}
+      <button
+        onClick={() => navigate("/profile/" + user.userName)}
+        className={`px-3 py-1 rounded ${
+          activeTab === "/profile" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"
+        }`}
+      >
+        Profile
+      </button>
+
+      <button onClick={handleLogout} className="text-gray-600 hover:text-red-500">
+        Logout
+      </button>
+    </div>
+  </>
+    ) : (
+      <div className="flex justify-end">
+        <button
+          onClick={() => navigate("/signup")}
+          className="text-blue-500 underline hover:text-blue-700"
+        >
+          Enter
+        </button>
+      </div>
+    )}
+
     </div>
   );
 };

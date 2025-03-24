@@ -76,7 +76,6 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
-    const [userData, setUserData] = useState(null);
     const [profilePicture, setProfilePicture] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     let dp = "/images/profile.jpeg";
@@ -113,18 +112,18 @@ const Profile = () => {
     
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (User) => {
+        console.log("Component Rendered");  
+        const fetchUser = async (User) => {
           if (User) {
-            const colRef = collection(db, 'Users');
-            console.log(colRef);
-            const q = query(colRef, where('uid', '==', User.uid));
+            const colRef = collection(db, "Users");
+            const q = query(colRef, where("uid", "==", User.uid));
             const snapshot = await getDocs(q);
-            console.log("Snapshot:",snapshot);
-            if (snapshot.size>0) {
+            
+            if (!snapshot.empty) {
               snapshot.forEach((doc) => {
-                console.log(doc.id, '=>', doc.data());
+                console.log(doc.id, "=>", doc.data());
                 setCurrentUser(doc.data());
-            });
+              });
             } else {
               console.log("No user document found!");
               setCurrentUser(User);
@@ -132,11 +131,21 @@ const Profile = () => {
           } else {
             setCurrentUser(null);
           }
-        });
+        };
+      
+        // Check if auth already has a user (solves issue on first load)
+        if (auth.currentUser) {
+          fetchUser(auth.currentUser);
+        }
+      
+        // Listen for auth state changes
+        const unsubscribe = onAuthStateChanged(auth, fetchUser);
       
         return () => unsubscribe();
       }, []);
-      console.log("Current User:",currentUser);
+      
+      console.log("Current User:", currentUser);
+      
 
     const navigate = useNavigate(); 
     const isAdmin = localStorage.getItem("isAdmin");
@@ -144,11 +153,12 @@ const Profile = () => {
     console.log("Admin:",isAdmin);
     console.log("Professor:",isProfessor);
     useEffect(() => {
-        console.log('Updated userData:', userData);
-    }, [userData]);
+        console.log('Updated currentUser:', currentUser);
+        renderProfileDetailsProfessor();
+    }, [currentUser]);
 
     useEffect(() => {
-        const fetchUserData = async () => {
+        const fetchcurrentUser = async () => {
             try {
                 console.log("Trying to fetch user data...");
     
@@ -163,10 +173,10 @@ const Profile = () => {
                 if (!userSnapshot.empty) {
                     userSnapshot.forEach((doc) => {
                         console.log("User found in Users collection:", doc.data());
-                        setUserData(doc.data());
+                        setCurrentUser(doc.data());
                         setProfileURL(doc.data().profileURL || "/images/profile.jpeg");
-                        setUrlIsProfessor(false);  // ✅ Not a professor
-                        setUrlIsAdmin(false);      // ✅ Not an admin
+                        setUrlIsProfessor(false); 
+                        setUrlIsAdmin(false);      
                     });
                     foundUser = true;
                 }
@@ -183,7 +193,7 @@ const Profile = () => {
                     if (!profSnapshot.empty) {
                         profSnapshot.forEach((doc) => {
                             console.log("User found in Professors collection:", doc.data());
-                            setUserData(doc.data());
+                            setCurrentUser(doc.data());
                             setProfileURL(doc.data().profileURL || "/images/profile.jpeg");
                             setUrlIsProfessor(true);   // ✅ Mark as Professor
                             setUrlIsAdmin(false);      // ✅ Not an admin
@@ -214,7 +224,7 @@ const Profile = () => {
             }
         };
     
-        fetchUserData();
+        fetchcurrentUser();
     }, [userName]); // ✅ Runs when userName changes
     
     
@@ -225,24 +235,24 @@ const Profile = () => {
 
         // Initialize editedUser with the fetched user data when entering edit mode
         setEditedUser({
-            name: userData?.name || '',
-            userName: userData?.userName || '',
-            email: userData?.email || '',
-            phone: userData?.phone || '',
-            institute: userData?.institute || '',
-            college: userData?.college || '',
-            linkedin: userData?.linkedin || '',
-            degree: userData?.degree || '',
-            department: userData?.department || '',
-            passingYear: userData?.passingYear || '',
-            work_exp: userData?.work_exp || [{}],
-            higherEducation: userData?.higherEducation || [{}],
-            profilepic: userData?.profilePicture || '',
-            profileURL: userData?.profileURL || '',
-            primaryemail: userData?.primaryemail || '',
-            additional_degree: userData?.additional_degree || '',
-            por: userData?.por || '',
-            placeofposting: userData?.placeofposting || '',
+            name: currentUser?.name || '',
+            userName: currentUser?.userName || '',
+            email: currentUser?.email || '',
+            phone: currentUser?.phone || '',
+            institute: currentUser?.institute || '',
+            college: currentUser?.college || '',
+            linkedin: currentUser?.linkedin || '',
+            degree: currentUser?.degree || '',
+            department: currentUser?.department || '',
+            passingYear: currentUser?.passingYear || '',
+            work_exp: currentUser?.work_exp || [{}],
+            higherEducation: currentUser?.higherEducation || [{}],
+            profilepic: currentUser?.profilePicture || '',
+            profileURL: currentUser?.profileURL || '',
+            primaryemail: currentUser?.primaryemail || '',
+            additional_degree: currentUser?.additional_degree || '',
+            por: currentUser?.por || '',
+            placeofposting: currentUser?.placeofposting || '',
         });
     };
 
@@ -327,7 +337,7 @@ const Profile = () => {
                 const docRef = doc(db, 'Users', querySnapshot.docs[0].id);
                 
                 if (profilePicture) {
-                    const storageRef = ref(storage,`/files/${userData.college}`)
+                    const storageRef = ref(storage,`/files/${currentUser.college}`)
                     console.log("stor ref: ",storageRef);
                     const uploadTask = uploadBytesResumable(storageRef, profilePicture);
                 
@@ -345,7 +355,7 @@ const Profile = () => {
 
                             // Update the document with the updatedEditedUser data
                             await updateDoc(docRef, updatedEditedUser);
-                            setUserData(updatedEditedUser);
+                            setCurrentUser(updatedEditedUser);
                         }
                     ); 
                     console.log(profileURL);
@@ -354,7 +364,7 @@ const Profile = () => {
                     console.log("no photo");
                     console.log(editedUser);
                     await updateDoc(docRef, editedUser);
-                    setUserData(editedUser);
+                    setCurrentUser(editedUser);
                 }
 
             console.log('Document successfully updated!');
@@ -467,13 +477,13 @@ const Profile = () => {
       
 
     const renderProfileDetails = () => {
-        // console.log("Here is userData",currentUser);
+        // console.log("Here is currentUser",currentUser);
         // console.log("Here is current Username:",currentUser.userName);
         // console.log("Here is userName:",userName);
         
         return (
             <div>
-                {userData ? (
+                {currentUser ? (
                     <>
                       <div className='relative w-full h-[300px] mt-0'>
                       <div
@@ -492,15 +502,15 @@ const Profile = () => {
 
                       <div className='flex flex-col gap-2 mt-[100px] ml-[230px]'>
                       <p className='font-bold text-[28px]'>
-                            {userData.name || "Unknown"} {userData.userName && `(${userData.userName})`}
+                            {currentUser.name || "Unknown"} {currentUser.userName && `(${currentUser.userName})`}
                         </p>
                         <div className='flex flex-row gap-[35px]'>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlineEmail className='mt-1.5'/>{userData.email}</p>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlinePhone className='mt-1.5'/>{userData.phone}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlineEmail className='mt-1.5'/>{currentUser.email}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlinePhone className='mt-1.5'/>{currentUser.phone}</p>
                         </div>
                         <div className='flex flex-row gap-[35px]'>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><AiOutlineLinkedin className='mt-1.5'/>{userData.linkedin}</p>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><IoLocationOutline className='mt-1.5'/>{userData.placeofposting}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><AiOutlineLinkedin className='mt-1.5'/>{currentUser.linkedin}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><IoLocationOutline className='mt-1.5'/>{currentUser.placeofposting}</p>
                         </div>
                       </div>
 
@@ -511,21 +521,21 @@ const Profile = () => {
         <div className="flex flex-row gap-[160px]">
           <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
             <p className="font-semibold">College:</p>
-            <p className="font-normal">{userData.college}</p>
+            <p className="font-normal">{currentUser.college}</p>
           </div>
           <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
             <p className="font-semibold">Degree:</p>
-            <p className="font-normal">{userData.degree}</p>
+            <p className="font-normal">{currentUser.degree}</p>
           </div>
         </div>
         <div className="flex flex-row gap-[160px]">
           <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
             <p className="font-semibold">Department:</p>
-            <p className="font-normal">{userData.department}</p>
+            <p className="font-normal">{currentUser.department}</p>
           </div>
           <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
             <p className="font-semibold">Passing Year:</p>
-            <p className="font-normal">{userData.passingYear}</p>
+            <p className="font-normal">{currentUser.passingYear}</p>
           </div>
         </div>
       </Section>
@@ -533,9 +543,9 @@ const Profile = () => {
       <div className="flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8"></div>
 
       <Section title="Higher Education">
-        {Array.isArray(userData.higherEducation) && userData.higherEducation.length > 0 ? (
+        {Array.isArray(currentUser.higherEducation) && currentUser.higherEducation.length > 0 ? (
           <ul className="list-disc pl-4">
-            {userData.higherEducation.map((highEdu, index) => (
+            {currentUser.higherEducation.map((highEdu, index) => (
               <li
                 key={index}
                 className="mb-6 border border-gray-200 rounded-md p-4 flex flex-row justify-between mr-[170px]"
@@ -561,9 +571,9 @@ const Profile = () => {
       <div className="flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8"></div>
 
       <Section title="Work Experience">
-        {Array.isArray(userData.work_exp) && userData.work_exp.length > 0 ? (
+        {Array.isArray(currentUser.work_exp) && currentUser.work_exp.length > 0 ? (
           <ul className="list-disc pl-4">
-            {userData.work_exp.map((workExp, index) => (
+            {currentUser.work_exp.map((workExp, index) => (
               <li
                 key={index}
                 className="mb-6 border border-gray-200 rounded-md p-4 flex flex-row justify-between mr-[170px]"
@@ -598,13 +608,16 @@ const Profile = () => {
     };
 
     const renderProfileDetailsProfessor = () => {
-        // console.log("Here is userData",currentUser);
+        
+        // console.log("Here is currentUser",currentUser);
         // console.log("Here is current Username:",currentUser.userName);
         // console.log("Here is userName:",userName);
         console.log("Inside Professors view");
+        console.log("Here is userName:",userName);
+        console.log("Here is current Username:",currentUser);
         return (
             <div>
-                {userData ? (
+                {currentUser ? (
                     <>
                       <div className='relative w-full h-[300px] mt-0'>
                       <div
@@ -623,15 +636,15 @@ const Profile = () => {
 
                       <div className='flex flex-col gap-2 mt-[100px] ml-[230px]'>
                       <p className='font-bold text-[28px]'>
-                            {userData.name || "Unknown"} {userData.userName && `(${userData.userName})`}
+                            {currentUser.name || "Unknown"} {currentUser.userName && `(${currentUser.userName})`}
                         </p>
                         <div className='flex flex-row gap-[35px]'>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlineEmail className='mt-1.5'/>{userData.email}</p>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlinePhone className='mt-1.5'/>{userData.phone}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlineEmail className='mt-1.5'/>{currentUser.email}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><MdOutlinePhone className='mt-1.5'/>{currentUser.phone}</p>
                         </div>
                         <div className='flex flex-row gap-[35px]'>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><AiOutlineLinkedin className='mt-1.5'/>{userData.linkedin}</p>
-                        <p className='font-semibold text-[20px] flex flex-row gap-2'><IoLocationOutline className='mt-1.5'/>{userData.placeofposting}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><AiOutlineLinkedin className='mt-1.5'/>{currentUser.linkedin}</p>
+                        <p className='font-semibold text-[20px] flex flex-row gap-2'><IoLocationOutline className='mt-1.5'/>{currentUser.placeofposting}</p>
                         </div>
                         <div className='flex flex-row gap-[35px]'>
                         {currentUser?.userName !== userName && (
@@ -655,11 +668,11 @@ const Profile = () => {
         <div className="flex flex-row gap-[160px]">
           <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
             <p className="font-semibold">College:</p>
-            <p className="font-normal">{userData.college}</p>
+            <p className="font-normal">{currentUser.college}</p>
           </div>
           <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
             <p className="font-semibold">Department:</p>
-            <p className="font-normal">{userData.department}</p>
+            <p className="font-normal">{currentUser.department}</p>
           </div>
         </div>
       </Section>
