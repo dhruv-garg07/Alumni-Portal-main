@@ -4,6 +4,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
 import { toast } from "react-toastify";
 import { CheckCircleIcon, XCircleIcon, EllipsisVerticalIcon } from "@heroicons/react/24/solid";
+import { useNavigate } from "react-router-dom";
 
 const Connections = () => {
   const [user, setUser] = useState(null);
@@ -11,6 +12,12 @@ const Connections = () => {
   const [connections, setConnections] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [isProfessor, setIsProfessor] = useState(false);
+  const navigate = useNavigate();
+
+  const handleMessageClick = (userName) => {
+    console.log("Got username:",userName);
+    navigate("/messages", { state: { userName } });
+};
 
   useEffect(() => {
     const checkIfProfessor = async () => {
@@ -263,7 +270,7 @@ const Connections = () => {
 
                 {/* Message Button */}
                 <button
-                    // onClick={() => handleMessage(conn.id)}
+                    onClick={() => handleMessageClick(conn.connectionName)}
                     className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition duration-300"
                 >
                     Message

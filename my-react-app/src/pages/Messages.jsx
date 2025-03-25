@@ -15,6 +15,7 @@ import {
 } from "../firebase";  
 
 import { getAuth } from "firebase/auth";
+import { useLocation } from "react-router-dom";
 
 const fullNameCache = {}; 
 const getFullNameByUserName = async (userName) => {
@@ -71,6 +72,7 @@ const FullNameDisplay = ({ userName }) => {
 
 
 const MessagesPage = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("chats");
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -78,11 +80,12 @@ const MessagesPage = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [chats, setChats] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [connections, setConnections] = useState([]);
+  const [requestedUserName, setRequestedUserName] = useState(location.state?.userName || null);
+
 
   const isAdmin = localStorage.getItem("isAdmin");
   const isProfessor = localStorage.getItem("isProfessor");
-  
+
 
   useEffect(() => {
     const auth = getAuth();
@@ -266,10 +269,19 @@ const MessagesPage = () => {
       return null;
     }
   };
-  
+
+  useEffect(() => {
+    if (requestedUserName && currentUser) {
+        handleSelectChatByUserName(requestedUserName);
+        setRequestedUserName(null);
+    }
+  }, [requestedUserName, currentUser]);  // Trigger whenever currentUser updates
+
+
   const handleSelectChat = async (chat) => {
+    console.log("The handleSelectChat is being invoked:",chat);
     if (!chat || !currentUser) return;
-  
+    
     console.log("Initial Chat:", chat);
   
     let updatedChat = { ...chat };
@@ -342,7 +354,62 @@ const MessagesPage = () => {
     }
   };
   
-  
+  const handleSelectChatByUserName = async (userName) => {
+    console.log("Inside handleSelectChatByUserName:", userName);
+    
+    if (!userName) return;
+
+    // Wait until currentUser is available
+    if (!currentUser) {
+        console.log("CurrentUser is not available yet. Waiting...");
+        return;  // Exit the function and retry later when `currentUser` updates
+    }
+
+    console.log("CurrentUser:", currentUser);
+    console.log("Here1");
+
+    try {
+        console.log("Here2");
+        console.log("Searching for existing chat with:", userName);
+
+        // Query Firestore to check if a chat already exists with the given userName
+        const chatsRef = collection(db, "chats");
+        const q = query(chatsRef, where("participants", "array-contains", currentUser.userName));
+        const querySnapshot = await getDocs(q);
+
+        let existingChat = null;
+
+        querySnapshot.forEach((doc) => {
+            const chatData = doc.data();
+            if (chatData.participants.includes(userName)) {
+                existingChat = { id: doc.id, ...chatData };
+            }
+        });
+
+        if (existingChat) {
+            console.log("Chat found:", existingChat);
+            handleSelectChat(existingChat); // Call existing function with chat
+        } else {
+            console.log("No existing chat found, creating a new one...");
+
+            // Create a new chat if not found
+            const newChat = {
+                participants: [currentUser.userName, userName],
+                messages: [],
+                createdAt: new Date(),
+            };
+
+            const docRef = await addDoc(collection(db, "chats"), newChat);
+            const newChatWithId = { id: docRef.id, ...newChat };
+
+            console.log("New chat created:", newChatWithId);
+            handleSelectChat(newChatWithId); // Call existing function with new chat
+        }
+    } catch (error) {
+        console.error("Error selecting chat:", error);
+    }
+};
+
 
   return (
     <div className="flex h-screen">
