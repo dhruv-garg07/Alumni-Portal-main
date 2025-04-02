@@ -1,5 +1,4 @@
-A way connect alums with each other, to current and prospective students and most importantly to the institute.
-
+A faculty-alumni portal that facilitates seamless connections between alumni and their professors, as well as professors and their students across different batches.
 
 1. Unzip the given folder
 2. Run command "npm i" in the server folder 
