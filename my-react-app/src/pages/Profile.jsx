@@ -77,6 +77,7 @@ const Profile = () => {
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
     const [profilePicture, setProfilePicture] = useState(null);
+    const [user, setUser] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     let dp = "/images/profile.jpeg";
     const [profileURL, setProfileURL] = useState(dp);
@@ -110,41 +111,37 @@ const Profile = () => {
   
     });
     
-
     useEffect(() => {
-        console.log("Component Rendered");  
-        const fetchUser = async (User) => {
-          if (User) {
-            const colRef = collection(db, "Users");
-            const q = query(colRef, where("uid", "==", User.uid));
-            const snapshot = await getDocs(q);
-            
-            if (!snapshot.empty) {
-              snapshot.forEach((doc) => {
-                console.log(doc.id, "=>", doc.data());
-                setCurrentUser(doc.data());
-              });
-            } else {
-              console.log("No user document found!");
-              setCurrentUser(User);
+        console.log("Inside authUser finding");
+        const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+          if (authUser) {
+            console.log("Inside authUser:",authUser);
+            try {
+              const collections = ["Users", "Professors", "admin"];
+              let userData = null;
+      
+              for (const collectionName of collections) {
+                const colRef = collection(db, collectionName);
+                const q = query(colRef, where("uid", "==", authUser.uid));
+                const snapshot = await getDocs(q);
+      
+                if (!snapshot.empty) {
+                  userData = snapshot.docs[0].data();
+                  break; // Stop checking once a match is found
+                }
+              }
+      
+              setUser(userData || authUser); // Fallback to auth user if not found in DB
+            } catch (error) {
+              console.error("Error fetching user data:", error);
             }
           } else {
-            setCurrentUser(null);
+            setUser(null);
           }
-        };
-      
-        // Check if auth already has a user (solves issue on first load)
-        if (auth.currentUser) {
-          fetchUser(auth.currentUser);
-        }
-      
-        // Listen for auth state changes
-        const unsubscribe = onAuthStateChanged(auth, fetchUser);
-      
+        });
         return () => unsubscribe();
       }, []);
-      
-      console.log("Current User:", currentUser);
+    
       
 
     const navigate = useNavigate(); 
@@ -195,6 +192,7 @@ const Profile = () => {
                             console.log("User found in Professors collection:", doc.data());
                             setCurrentUser(doc.data());
                             setProfileURL(doc.data().profileURL || "/images/profile.jpeg");
+                            console.log("Marking url as a professor");
                             setUrlIsProfessor(true);   // ✅ Mark as Professor
                             setUrlIsAdmin(false);      // ✅ Not an admin
                         });
@@ -227,6 +225,14 @@ const Profile = () => {
         fetchcurrentUser();
     }, [userName]); // ✅ Runs when userName changes
     
+    useEffect(() => {
+        console.log("Updated user:", user);
+      }, [user]);
+      
+      useEffect(() => {
+        console.log("Updated currentUser:", currentUser);
+      }, [currentUser]);
+      
     
     
 
@@ -392,7 +398,7 @@ const Profile = () => {
     };
 
     const handleSendConnectionRequest = async () => {
-        if (!currentUser || !currentUser.userName) {
+        if (!user || !currentUser || !currentUser.userName) {
             console.error("User not logged in");
             toast.error("Please login first",toastOptions);
             return;
@@ -402,7 +408,7 @@ const Profile = () => {
             const connectionRequestRef = collection(db, "connectionRequests"); // Reference to connectionRequests collection
             const querySnapshot = await getDocs(
                 query(connectionRequestRef, 
-                    where("sender", "==", currentUser.userName),
+                    where("sender", "==", user.userName),
                     where("receiver", "==", userName)
                 )
             );
@@ -416,7 +422,7 @@ const Profile = () => {
     
             // If no duplicate request exists, add a new request
             await addDoc(connectionRequestRef, {
-                sender: currentUser.userName,
+                sender: user.userName,
                 receiver: userName,
                 status: "pending", // Mark request as pending
                 timestamp: serverTimestamp() // Store request time
@@ -480,7 +486,7 @@ const Profile = () => {
         // console.log("Here is currentUser",currentUser);
         // console.log("Here is current Username:",currentUser.userName);
         // console.log("Here is userName:",userName);
-        
+        console.log("Inside alumini view");
         return (
             <div>
                 {currentUser ? (
@@ -615,9 +621,10 @@ const Profile = () => {
         console.log("Inside Professors view");
         console.log("Here is userName:",userName);
         console.log("Here is current Username:",currentUser);
+        console.log("Here is the user:",user);
         return (
             <div>
-                {currentUser ? (
+                {currentUser && user? (
                     <>
                       <div className='relative w-full h-[300px] mt-0'>
                       <div
@@ -647,7 +654,7 @@ const Profile = () => {
                         <p className='font-semibold text-[20px] flex flex-row gap-2'><IoLocationOutline className='mt-1.5'/>{currentUser.placeofposting}</p>
                         </div>
                         <div className='flex flex-row gap-[35px]'>
-                        {currentUser?.userName !== userName && (
+                        {user?.userName !== userName && (
                         <div className="mt-1.5">  
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-md text-lg font-semibold hover:bg-blue-700 transition-all"
@@ -664,31 +671,31 @@ const Profile = () => {
                       <div className='flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8'></div>
                       
 
-    <Section title="Basic Details">
-        <div className="flex flex-row gap-[160px]">
-          <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
-            <p className="font-semibold">College:</p>
-            <p className="font-normal">{currentUser.college}</p>
-          </div>
-          <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
-            <p className="font-semibold">Department:</p>
-            <p className="font-normal">{currentUser.department}</p>
-          </div>
-        </div>
-      </Section>
+                    <Section title="Basic Details">
+                        <div className="flex flex-row gap-[160px]">
+                        <div className="flex flex-row gap-2 text-[21px] ml-[0px]">
+                            <p className="font-semibold">College:</p>
+                            <p className="font-normal">{currentUser.college}</p>
+                        </div>
+                        <div className="flex flex-row gap-2 text-[21px] ml-[30px]">
+                            <p className="font-semibold">Department:</p>
+                            <p className="font-normal">{currentUser.department}</p>
+                        </div>
+                        </div>
+                    </Section>
 
-      <div className="flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8"></div>
+                    <div className="flex items-center justify-center border-2 border-gray-200 w-[1300px] h-0 ml-[120px] mt-8"></div>
 
-      
-                </>
-            ): (
-                        <p>Loading user data...</p>
-                    )}
-            
+                    
+                                </>
+                            ): (
+                                        <p>Loading user data...</p>
+                                    )}
+                            
 
-        </div>
-            );
-    };
+                        </div>
+                            );
+                    };
 
     const renderEditProfileForm = () => {
         
@@ -1343,7 +1350,7 @@ const Profile = () => {
             <>
                 {/* <h2 className="text-xl font-bold text-center">Professor Profile</h2> */}
                 {isEditing ? renderEditProfileFormProfessor() : renderProfileDetailsProfessor()}
-                {!isEditing && currentUser !== null && currentUser.userName === userName && (
+                {!isEditing && currentUser && user && user.userName === currentUser.userName && (
                     <div className="p-2 flex justify-center">
                         <button
                             className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
@@ -1360,17 +1367,19 @@ const Profile = () => {
                 {/* User Profile View */}
                 {/* <h2 className="text-xl font-bold text-center">User Profile</h2> */}
                 {isEditing ? renderEditProfileForm() : renderProfileDetails()}
-                {!isEditing && currentUser !== null && currentUser.userName === userName && (
-                    <div className="p-2 flex justify-center">
-                        <button
-                            className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
-                            onClick={handleEditClick}
-                            disabled={isEditing}
-                        >
-                            Edit Profile
-                        </button>
-                    </div>
+                {console.log("Inside edit Profile user:", user) || console.log("Inside edit Profile currentUser:", currentUser) || 
+                !isEditing && user !== null && currentUser !== null && user.userName === currentUser.userName && (
+                <div className="p-2 flex justify-center">
+                    <button
+                    className="bg-blue-900 text-white px-6 py-3 rounded-lg text-lg font-semibold mr-10"
+                    onClick={handleEditClick}
+                    disabled={isEditing}
+                    >
+                    Edit Profile
+                    </button>
+                </div>
                 )}
+
             </>
         )}
     </div>

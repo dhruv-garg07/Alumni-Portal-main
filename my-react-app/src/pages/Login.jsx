@@ -279,6 +279,7 @@ const Login = () => {
             console.log(userId);
             localStorage.setItem("userId", userId);
             localStorage.setItem("isAdmin", false);
+            localStorage.setItem("isProfessor", false);
             if(selectedOption === "Admin"){
                 setIsAdmin(true);
                 localStorage.setItem("isAdmin", "true");
