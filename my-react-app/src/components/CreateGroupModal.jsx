@@ -36,7 +36,7 @@ const CreateGroupModal = ({ connections, onClose, currentUser}) => {
     try {
       await addDoc(collection(db, "groups"), {
         name: groupName,
-        participants,
+        participants: participants,
         createdBy: currentUser.userName,
         createdAt: new Date(),
       });
