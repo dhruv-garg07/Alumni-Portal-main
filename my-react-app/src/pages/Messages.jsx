@@ -110,7 +110,7 @@ const MessagesPage = () => {
             }
           }
 
-          setCurrentUser(currentUserData); // ✅ Updates state asynchronously
+          setCurrentUser(currentUserData); //  Updates state asynchronously
           console.log("Fetched Current User Data:", currentUserData);
 
         } catch (error) {
@@ -135,27 +135,27 @@ const MessagesPage = () => {
       try {
         const connectionRef = collection(db, "connectionRequests");
   
-        // ✅ Fetch confirmed individual connections
+        //  Fetch confirmed individual connections
         const [confirmedSnapshot1, confirmedSnapshot2] = await Promise.all([
           getDocs(query(connectionRef, where("status", "==", "accepted"), where("receiver", "==", currentUser.userName))),
           getDocs(query(connectionRef, where("status", "==", "accepted"), where("sender", "==", currentUser.userName)))
         ]);
   
-        // ✅ Store all accepted individual connections
+        //  Store all accepted individual connections
         const allConnections = [
           ...confirmedSnapshot1.docs.map(doc => ({ id: doc.id, userName: doc.data().sender })),
           ...confirmedSnapshot2.docs.map(doc => ({ id: doc.id, userName: doc.data().receiver }))
         ];
   
-        // ✅ Set individual connections state
+        //  Set individual connections state
         setConnections(allConnections);
   
-        // ✅ Fetch existing individual chats
+        //  Fetch existing individual chats
         const chatsRef = collection(db, "chats");
         const chatQuery = query(chatsRef, where("participants", "array-contains", currentUser.userName));
         const chatSnapshot = await getDocs(chatQuery);
   
-        // ✅ Store individual chats in a Map (key: otherUserName, value: chatData)
+        //  Store individual chats in a Map (key: otherUserName, value: chatData)
         const chatMap = new Map();
         chatSnapshot.docs.forEach(doc => {
           const chatData = { id: doc.id, ...doc.data() };
@@ -166,13 +166,13 @@ const MessagesPage = () => {
           });
         });
   
-        // ✅ Merge connections with existing individual chats (Create new chats if needed)
+        //  Merge connections with existing individual chats (Create new chats if needed)
         const allChats = await Promise.all(
           allConnections.map(async (conn) => {
             let chatData = chatMap.get(conn.userName);
   
             if (!chatData) {
-              // ✅ Create new chat if not exists
+              //  Create new chat if not exists
               const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [currentUser.userName, conn.userName],
                 lastMessageAt: null,
@@ -185,7 +185,7 @@ const MessagesPage = () => {
                 user: conn.userName
               };
             } else {
-              // ✅ Fetch messages for existing individual chats
+              //  Fetch messages for existing individual chats
               const messagesRef = collection(db, "messages");
               const messagesQuery = query(messagesRef, where("chatId", "==", chatData.id), orderBy("createdAt"));
               const messagesSnapshot = await getDocs(messagesQuery);
@@ -200,17 +200,17 @@ const MessagesPage = () => {
           })
         );
   
-        // ✅ Fetch existing group chats
+        //  Fetch existing group chats
         const groupsRef = collection(db, "groups");
         const groupQuery = query(groupsRef, where("participants", "array-contains", currentUser.userName));
         const groupSnapshot = await getDocs(groupQuery);
   
-        // ✅ Store groups and their messages
+        //  Store groups and their messages
         const allGroups = await Promise.all(
           groupSnapshot.docs.map(async (doc) => {
             const groupData = { id: doc.id, ...doc.data() };
   
-            // ✅ Fetch messages for group chats from the `groupMessages` collection
+            //  Fetch messages for group chats from the `groupMessages` collection
             const messagesRef = collection(db, "groupMessages");
             const messagesQuery = query(messagesRef, where("groupId", "==", groupData.id), orderBy("createdAt"));
             const messagesSnapshot = await getDocs(messagesQuery);
@@ -224,7 +224,7 @@ const MessagesPage = () => {
           })
         );
   
-        // ✅ Update state for both individual chats and groups
+        //  Update state for both individual chats and groups
         setChats(allChats);      // Individual chats
         setGroups(allGroups);    // Group chats
   
@@ -233,16 +233,16 @@ const MessagesPage = () => {
       }
     };
   
-    // ✅ Fetch initially & every 5 seconds
+    //  Fetch initially & every 5 seconds
     fetchChatsAndConnections();
     const intervalId = setInterval(fetchChatsAndConnections, 1000);
   
-    // ✅ Cleanup interval on unmount
+    //  Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [currentUser]);
     
   
-  // ✅ Log updated chats AFTER state update
+  // Log updated chats AFTER state update
   useEffect(() => {
     console.log("Updated Chats:", chats);
   }, [chats]);
@@ -254,7 +254,7 @@ const MessagesPage = () => {
   // useEffect(() => {
   //   if (!currentUser) return;
   
-  //   // ✅ Listen for real-time chat updates
+  //   //  Listen for real-time chat updates
   //   const chatsRef = collection(db, "chats");
   //   const q = query(chatsRef, where("participants", "array-contains", currentUser.uid), orderBy("lastMessageAt", "desc"));
   
@@ -262,7 +262,7 @@ const MessagesPage = () => {
   //     setChats(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
   //   });
   
-  //   // ✅ Listen for real-time group updates
+  //   //  Listen for real-time group updates
   //   const groupsRef = collection(db, "groups");
   //   const qGroups = query(groupsRef, where("participants", "array-contains", currentUser.uid));
   //   const unsubscribeGroups = onSnapshot(qGroups, (snapshot) => {
@@ -347,7 +347,7 @@ const MessagesPage = () => {
           lastMessageAt: new Date(),
         });
   
-        chatId = newChatRef.id; // ✅ Correct way to get the Firestore document ID
+        chatId = newChatRef.id; //  Correct way to get the Firestore document ID
       } catch (error) {
         console.error("Error creating new chat:", error);
         return;

@@ -193,8 +193,8 @@ const Profile = () => {
                             setCurrentUser(doc.data());
                             setProfileURL(doc.data().profileURL || "/images/profile.jpeg");
                             console.log("Marking url as a professor");
-                            setUrlIsProfessor(true);   // ✅ Mark as Professor
-                            setUrlIsAdmin(false);      // ✅ Not an admin
+                            setUrlIsProfessor(true);   //  Mark as Professor
+                            setUrlIsAdmin(false);      //  Not an admin
                         });
                         foundUser = true;
                     }
@@ -211,7 +211,7 @@ const Profile = () => {
     
                     if (!adminSnapshot.empty) {
                         console.log("User found in Admins collection.");
-                        setUrlIsAdmin(true);  // ✅ Mark as Admin
+                        setUrlIsAdmin(true);  //  Mark as Admin
                     } else {
                         console.log("User not found in Admins collection either.");
                     }
@@ -223,7 +223,7 @@ const Profile = () => {
         };
     
         fetchcurrentUser();
-    }, [userName]); // ✅ Runs when userName changes
+    }, [userName]); //  Runs when userName changes
     
     useEffect(() => {
         console.log("Updated user:", user);
