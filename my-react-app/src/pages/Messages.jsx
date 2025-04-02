@@ -16,6 +16,7 @@ import {
 
 import { getAuth } from "firebase/auth";
 import { useLocation } from "react-router-dom";
+import CreateGroupModal from "../components/CreateGroupModal"
 
 const fullNameCache = {}; 
 const getFullNameByUserName = async (userName) => {
@@ -81,6 +82,9 @@ const MessagesPage = () => {
   const [chats, setChats] = useState([]);
   const [groups, setGroups] = useState([]);
   const [requestedUserName, setRequestedUserName] = useState(location.state?.userName || null);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [connections, setConnections] = useState([]);
+
 
 
   const isAdmin = localStorage.getItem("isAdmin");
@@ -130,31 +134,28 @@ const MessagesPage = () => {
     const fetchChatsAndConnections = async () => {
       try {
         const connectionRef = collection(db, "connectionRequests");
-    
-        // ✅ Fetch confirmed connections
+  
+        // ✅ Fetch confirmed individual connections
         const [confirmedSnapshot1, confirmedSnapshot2] = await Promise.all([
           getDocs(query(connectionRef, where("status", "==", "accepted"), where("receiver", "==", currentUser.userName))),
           getDocs(query(connectionRef, where("status", "==", "accepted"), where("sender", "==", currentUser.userName)))
         ]);
-    
-        // ✅ Store all accepted connections using usernames
+  
+        // ✅ Store all accepted individual connections
         const allConnections = [
-          ...confirmedSnapshot1.docs.map(doc => ({
-            id: doc.id,
-            userName: doc.data().sender,
-          })),
-          ...confirmedSnapshot2.docs.map(doc => ({
-            id: doc.id,
-            userName: doc.data().receiver,
-          }))
+          ...confirmedSnapshot1.docs.map(doc => ({ id: doc.id, userName: doc.data().sender })),
+          ...confirmedSnapshot2.docs.map(doc => ({ id: doc.id, userName: doc.data().receiver }))
         ];
-    
-        // ✅ Fetch existing chats
+  
+        // ✅ Set individual connections state
+        setConnections(allConnections);
+  
+        // ✅ Fetch existing individual chats
         const chatsRef = collection(db, "chats");
         const chatQuery = query(chatsRef, where("participants", "array-contains", currentUser.userName));
         const chatSnapshot = await getDocs(chatQuery);
-    
-        // ✅ Store chats in a Map (key: otherUserName, value: chatData)
+  
+        // ✅ Store individual chats in a Map (key: otherUserName, value: chatData)
         const chatMap = new Map();
         chatSnapshot.docs.forEach(doc => {
           const chatData = { id: doc.id, ...doc.data() };
@@ -164,19 +165,19 @@ const MessagesPage = () => {
             }
           });
         });
-    
-        // ✅ Merge allConnections with existing chats (Create new chats if needed)
+  
+        // ✅ Merge connections with existing individual chats (Create new chats if needed)
         const allChats = await Promise.all(
           allConnections.map(async (conn) => {
             let chatData = chatMap.get(conn.userName);
-    
+  
             if (!chatData) {
               // ✅ Create new chat if not exists
               const newChatRef = await addDoc(collection(db, "chats"), {
                 participants: [currentUser.userName, conn.userName],
                 lastMessageAt: null,
               });
-    
+  
               chatData = {
                 id: newChatRef.id,
                 participants: [currentUser.userName, conn.userName],
@@ -184,66 +185,95 @@ const MessagesPage = () => {
                 user: conn.userName
               };
             } else {
-              // ✅ Fetch messages for existing chats
+              // ✅ Fetch messages for existing individual chats
               const messagesRef = collection(db, "messages");
               const messagesQuery = query(messagesRef, where("chatId", "==", chatData.id), orderBy("createdAt"));
               const messagesSnapshot = await getDocs(messagesQuery);
-    
+  
               chatData.messages = messagesSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
               }));
             }
-    
+  
             return chatData;
           })
         );
-    
-        // ✅ Update state
-        setChats(allChats);
+  
+        // ✅ Fetch existing group chats
+        const groupsRef = collection(db, "groups");
+        const groupQuery = query(groupsRef, where("participants", "array-contains", currentUser.userName));
+        const groupSnapshot = await getDocs(groupQuery);
+  
+        // ✅ Store groups and their messages
+        const allGroups = await Promise.all(
+          groupSnapshot.docs.map(async (doc) => {
+            const groupData = { id: doc.id, ...doc.data() };
+  
+            // ✅ Fetch messages for group chats from the `groupMessages` collection
+            const messagesRef = collection(db, "groupMessages");
+            const messagesQuery = query(messagesRef, where("groupId", "==", groupData.id), orderBy("createdAt"));
+            const messagesSnapshot = await getDocs(messagesQuery);
+  
+            groupData.messages = messagesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+  
+            return groupData;
+          })
+        );
+  
+        // ✅ Update state for both individual chats and groups
+        setChats(allChats);      // Individual chats
+        setGroups(allGroups);    // Group chats
+  
       } catch (error) {
-        console.error("Error fetching connections and chats:", error);
+        console.error("Error fetching connections, individual chats, and group chats:", error);
       }
     };
-    
   
     // ✅ Fetch initially & every 5 seconds
     fetchChatsAndConnections();
-    const intervalId = setInterval(fetchChatsAndConnections, 5000);
+    const intervalId = setInterval(fetchChatsAndConnections, 1000);
   
     // ✅ Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [currentUser]);
+    
   
   // ✅ Log updated chats AFTER state update
   useEffect(() => {
     console.log("Updated Chats:", chats);
   }, [chats]);
   
-  
   useEffect(() => {
-    if (!currentUser) return;
+    console.log("Updated Groups:", groups);
+  }, [groups]);
   
-    // ✅ Listen for real-time chat updates
-    const chatsRef = collection(db, "chats");
-    const q = query(chatsRef, where("participants", "array-contains", currentUser.uid), orderBy("lastMessageAt", "desc"));
+  // useEffect(() => {
+  //   if (!currentUser) return;
   
-    const unsubscribeChats = onSnapshot(q, (snapshot) => {
-      setChats(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+  //   // ✅ Listen for real-time chat updates
+  //   const chatsRef = collection(db, "chats");
+  //   const q = query(chatsRef, where("participants", "array-contains", currentUser.uid), orderBy("lastMessageAt", "desc"));
   
-    // ✅ Listen for real-time group updates
-    const groupsRef = collection(db, "groups");
-    const qGroups = query(groupsRef, where("members", "array-contains", currentUser.uid));
-    const unsubscribeGroups = onSnapshot(qGroups, (snapshot) => {
-      setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+  //   const unsubscribeChats = onSnapshot(q, (snapshot) => {
+  //     setChats(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  //   });
   
-    return () => {
-      unsubscribeChats();
-      unsubscribeGroups();
-    };
-  }, [currentUser]);
+  //   // ✅ Listen for real-time group updates
+  //   const groupsRef = collection(db, "groups");
+  //   const qGroups = query(groupsRef, where("participants", "array-contains", currentUser.uid));
+  //   const unsubscribeGroups = onSnapshot(qGroups, (snapshot) => {
+  //     setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  //   });
+  
+  //   return () => {
+  //     unsubscribeChats();
+  //     unsubscribeGroups();
+  //   };
+  // }, [currentUser]);
   
 
 
@@ -298,9 +328,6 @@ const MessagesPage = () => {
   };
   
   
-  
-  
-
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedChat || !currentUser) return;
   
@@ -414,41 +441,63 @@ const MessagesPage = () => {
   return (
     <div className="flex h-screen">
       {/* Left Sidebar (Chats & Groups) */}
-      <div className="w-1/3 bg-gray-100 p-4 border-r">
-        <div className="flex justify-between mb-4">
-          <button
-            className={`p-2 ${activeTab === "chats" ? "font-bold" : ""}`}
-            onClick={() => setActiveTab("chats")}
-          >
-            Chats
-          </button>
-          <button
-            className={`p-2 ${activeTab === "groups" ? "font-bold" : ""}`}
-            onClick={() => setActiveTab("groups")}
-          >
-            Groups
-          </button>
-        </div>
-  
-        {/* Chat List */}
-        <div>
-      {(activeTab === "chats"
-        ? chats.filter((chat) => chat.participants.includes(currentUser.userName))
-        : groups
-      ).map((chat) => (
-        <div
-          key={chat.id || chat.participants.join("-")}
-          className="p-3 border-b cursor-pointer hover:bg-gray-200"
-          onClick={() => handleSelectChat(chat)}
-        >
-          <p className="font-semibold">
-            <FullNameDisplay userName={chat.participants.find((p) => p !== currentUser.userName) || "Unknown User"} />
-          </p>
-        </div>
-      ))}
-    </div>
+<div className="w-1/3 bg-gray-100 p-4 border-r">
+  {/* Tabs */}
+  <div className="flex justify-between mb-4">
+    <button
+      className={`p-2 ${activeTab === "chats" ? "font-bold" : ""}`}
+      onClick={() => setActiveTab("chats")}
+    >
+      Chats
+    </button>
+    <button
+      className={`p-2 ${activeTab === "groups" ? "font-bold" : ""}`}
+      onClick={() => setActiveTab("groups")}
+    >
+      Groups
+    </button>
+  </div>
 
+  {/* "Create Group" button - Only shown when in "Groups" tab */}
+  {activeTab === "groups" && (
+    <div className="mb-4">
+      <button 
+  onClick={() => setShowCreateGroupModal(true)}
+  className="p-2 bg-blue-500 text-white rounded"
+>
+  + Create Group
+</button>
+
+{showCreateGroupModal && <CreateGroupModal connections={connections}  currentUser={currentUser} onClose={() => setShowCreateGroupModal(false)} />}
+
+    </div>
+  )}
+
+  {/* Chat List */}
+  <div>
+    {(activeTab === "chats"
+      ? chats.filter((chat) => currentUser && chat.participants.includes(currentUser.userName))
+      : groups.filter((group) => currentUser && group.participants.includes(currentUser.userName))
+    ).map((chatOrGroup) => (
+      <div
+        key={chatOrGroup.id || chatOrGroup.participants.join("-")}
+        className="p-3 border-b cursor-pointer hover:bg-gray-200"
+        onClick={() => handleSelectChat(chatOrGroup)}
+      >
+        <p className="font-semibold">
+          {activeTab === "chats" ? (
+            <FullNameDisplay 
+              userName={chatOrGroup.participants.find((p) => p !== currentUser?.userName) || "Unknown User"} 
+            />
+          ) : (
+            chatOrGroup.name // Show group name instead of individual participants
+          )}
+        </p>
       </div>
+    ))}
+  </div>
+</div>
+
   
       {/* Chat Window */}
       <div className="w-2/3 flex flex-col h-[calc(100vh-4rem)]">
