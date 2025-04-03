@@ -176,6 +176,22 @@ const checkUsernameExists = async (username) => {
   // if (isLoggedIn) {
   //   navigate("/home");
   // }
+  const checkIfUserExists = async (email) => {
+    const collections = ["Users", "Professors", "Admin"];
+  
+    for (const collectionName of collections) {
+      const colRef = collection(db, collectionName);
+      const q = query(colRef, where("primaryemail", "==", email));
+      const snapshot = await getDocs(q);
+  
+      if (!snapshot.empty) {
+        return true; // Email found in one of the collections
+      }
+    }
+  
+    return false; // Email does not exist in any collection
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const mandatoryFields = [
@@ -215,12 +231,10 @@ const checkUsernameExists = async (username) => {
       return;
     }
 
-    const colRef = collection(db, "Professors");
-    const q = query(colRef, where("college", "==", editedUser["college"]));
-    const snapshot = await getDocs(q);
-    console.log(snapshot);
-    console.log(snapshot.size);
-    if (snapshot.size > 0) {
+
+    const userExists = await checkIfUserExists(editedUser["primaryemail"]);
+  
+    if (userExists) {
       setErrorMessage("User Already a member");
       return;
     }

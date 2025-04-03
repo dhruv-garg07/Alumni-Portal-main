@@ -224,7 +224,7 @@ const Connections = () => {
                     {pendingRequests.map((req) => (
                     <div key={req.id} className="flex items-center bg-white shadow-md rounded-lg p-4 w-full">
                         <img
-                        src={req.profilePic || "https://via.placeholder.com/50"}
+                        src={req.profilePic || "/images.png"}
                         alt="Profile"
                         className="w-12 h-12 rounded-full mr-4"
                         />
@@ -259,7 +259,7 @@ const Connections = () => {
             {connections.map((conn) => (
                 <div key={conn.id} className="flex items-center bg-white shadow-md rounded-lg p-4 w-full relative">
                 <img
-                    src={conn.profilePic || "https://via.placeholder.com/50"}
+                    src={conn.profilePic || "/images.png"}
                     alt="Profile"
                     className="w-12 h-12 rounded-full mr-4"
                 />

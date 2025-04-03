@@ -147,6 +147,22 @@ const BecomeAMember = () => {
     }
   };
 
+  const checkIfUserExists = async (email) => {
+      const collections = ["Users", "Professors", "Admin"];
+    
+      for (const collectionName of collections) {
+        const colRef = collection(db, collectionName);
+        const q = query(colRef, where("primaryemail", "==", email));
+        const snapshot = await getDocs(q);
+    
+        if (!snapshot.empty) {
+          return true; // Email found in one of the collections
+        }
+      }
+    
+      return false; // Email does not exist in any collection
+    };
+
   const navigate = useNavigate();
   if (isAdmin === "true") {
     return (
@@ -243,12 +259,9 @@ const BecomeAMember = () => {
       return;
     }
 
-    const colRef = collection(db, "Users");
-    const q = query(colRef, where("primaryemail", "==", editedUser["primaryemail"]));
-    const snapshot = await getDocs(q);
-    console.log(snapshot);
-    console.log(snapshot.size);
-    if (snapshot.size > 0) {
+    const userExists = await checkIfUserExists(editedUser["primaryemail"]);
+  
+    if (userExists) {
       setErrorMessage("User Already a member");
       return;
     }
