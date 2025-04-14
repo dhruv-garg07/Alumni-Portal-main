@@ -46,7 +46,7 @@ const SearchBar = () => {
   const handleSelectProfessor = (professor) => {
     setSearchQuery(professor.name);
     setSuggestions([]); // Hide suggestions
-    navigate(`/profile/${professor.name}`); // Navigate to profile
+    navigate(`/profile/${professor.userName}`); // Navigate to profile
   };
 
   return (
