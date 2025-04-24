@@ -23,15 +23,17 @@ import {
 } from "firebase/firestore";
 
 // Your Firebase configuration
+
 const firebaseConfig = {
-  apiKey: "AIzaSyChbTQJadFpP5QSRC4JqS9wuB8qW8yrRCA",
-  authDomain: "faculty-portal-70a87.firebaseapp.com",
-  projectId: "faculty-portal-70a87",
-  storageBucket: "faculty-portal-70a87.appspot.com",
-  messagingSenderId: "314100072760",
-  appId: "1:314100072760:web:46810a1b401f504b8941cd",
-  measurementId: "G-RK4QB8XNTR"
+  apiKey: "AIzaSyDERxYtlo7_R5BUkDUPMw33IcVvLKhFtZw",
+  authDomain: "faculty-portal-latest.firebaseapp.com",
+  projectId: "faculty-portal-latest",
+  storageBucket: "faculty-portal-latest.firebasestorage.app",
+  messagingSenderId: "366849146115",
+  appId: "1:366849146115:web:37b2ef3ee76788852b3d36",
+  measurementId: "G-ZD9XR9CGF4"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

@@ -70,6 +70,12 @@ const FullNameDisplay = ({ userName }) => {
   return <>{fullName}</>;
 };
 
+const handleRemoveParticipant = (userId) => {
+  // You can later call your API here too
+  console.log("Removing participant with ID:", userId);
+  
+  return;
+};
 
 
 const MessagesPage = () => {
@@ -84,6 +90,7 @@ const MessagesPage = () => {
   const [requestedUserName, setRequestedUserName] = useState(location.state?.userName || null);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [connections, setConnections] = useState([]);
+  const [showParticipants, setShowParticipants] = useState(false);
 
 
 
@@ -310,6 +317,7 @@ const MessagesPage = () => {
 
   const handleSelectChat = async (chat) => {
     console.log("The handleSelectChat is being invoked:",chat);
+    console.log("Participants for chat:",chat.participants);
     if (!chat || !currentUser) return;
     
     console.log("Initial Chat:", chat);
@@ -503,7 +511,35 @@ const MessagesPage = () => {
       <div className="w-2/3 flex flex-col h-[calc(100vh-4rem)]">
         {selectedChat ? (
           <div className="flex flex-col h-full">
-            <div className="p-4 bg-gray-200 font-bold border-b">{selectedChat.name || "Chat"}</div>
+            <div
+              className="p-4 bg-gray-200 font-bold border-b cursor-pointer hover:bg-gray-300"
+              onClick={() => setShowParticipants(!showParticipants)}
+            >
+              {selectedChat.name || "Chat"}
+            </div>
+
+            {showParticipants && (
+                <div className="bg-white shadow p-4 border-b">
+                  <p className="font-semibold mb-2">Participants:</p>
+                  <ul>
+                    {selectedChat.participants.map((participant) => (
+                      <li
+                        key={participant}
+                        className="flex justify-between items-center mb-1 text-sm"
+                      >
+                        <span><FullNameDisplay userName={participant} /></span>
+                        <button
+                          className="text-red-500 hover:underline text-xs"
+                          onClick={() => handleRemoveParticipant(participant)}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
             <div className="flex-grow p-4 overflow-auto">
               {messages.length > 0 ? (
                 messages.map((msg) => (
