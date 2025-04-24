@@ -13,7 +13,7 @@ import {
     where,
     updateDoc
 } from "../firebase";  
-
+import {arrayRemove} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useLocation } from "react-router-dom";
 import CreateGroupModal from "../components/CreateGroupModal"
@@ -70,10 +70,18 @@ const FullNameDisplay = ({ userName }) => {
   return <>{fullName}</>;
 };
 
-const handleRemoveParticipant = (userId) => {
+const handleRemoveParticipant = async(selectedChat,userId) => {
   // You can later call your API here too
   console.log("Removing participant with ID:", userId);
-  
+  try {
+    const chatRef = doc(db, "chats", selectedChat.id); // "chats" is the collection, and selectedChat.id is the document ID of the chat
+    await updateDoc(chatRef, {
+      participants: arrayRemove(userId), // Removes the userId from the participants array
+    });
+    console.log("Removed participant with ID:", userId);
+  } catch (error) {
+    console.error("Error removing participant: ", error);
+  }
   return;
 };
 
@@ -530,7 +538,7 @@ const MessagesPage = () => {
                         <span><FullNameDisplay userName={participant} /></span>
                         <button
                           className="text-red-500 hover:underline text-xs"
-                          onClick={() => handleRemoveParticipant(participant)}
+                          onClick={() => handleRemoveParticipant(selectedChat,participant)}
                         >
                           Remove
                         </button>
