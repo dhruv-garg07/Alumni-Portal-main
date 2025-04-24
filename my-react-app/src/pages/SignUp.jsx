@@ -140,7 +140,7 @@ const SignUp = () => {
             // const querySnapshot = await getDocs(q);
 
             // // Check if any documents match the query
-            // if (selectedOption==="Alumni" && querySnapshot.size > 0) {
+            // if (selectedOption=="Alumni" && querySnapshot.size > 0) {
             //     // Get the reference to the first matching document
             //     const docRef = doc(db, 'Users', querySnapshot.docs[0].id);
             
@@ -181,13 +181,13 @@ const SignUp = () => {
             const errorCode = error.code;
             // const errorMessage = error.message;
 
-            if(errorCode === "auth/weak-password"){
+            if(errorCode == "auth/weak-password"){
                 errorMessage = "Password is too weak";
             }
-            else if(errorCode === "auth/email-already-in-use"){
+            else if(errorCode == "auth/email-already-in-use"){
                 errorMessage = "Entered email is already in use. Please log in or use different email id.";
             }
-            else if(errorCode === "auth/invalid-email"){
+            else if(errorCode == "auth/invalid-email"){
                 errorMessage = "Entered email is invalid.";
             }
             else{
@@ -199,33 +199,33 @@ const SignUp = () => {
 
     const handleSubmit = async (e) => {
       e.preventDefault();
-      if(selectedOption === ""){
+      if(selectedOption == ""){
           errorMessage = "Select Option Alumni/Admin.";
           toast.error(errorMessage, toastOptions);
           return;
       }
         
-      if(email === ""){
+      if(email == ""){
           errorMessage = "Email is required.";
           toast.error(errorMessage, toastOptions);
           return;
       }
         
-    if(name === ""){
+    if(name == ""){
         errorMessage = "UserName is required.";
         toast.error(errorMessage, toastOptions);
         return;
     }
     let type="Users";
-    if(selectedOption === "Professor"){
+    if(selectedOption == "Professor"){
         type="Professor";
     }
-    else if(selectedOption === "Admin"){
+    else if(selectedOption == "Admin"){
         type="Admin";
     }
         
     const colRef = collection(db, type);
-    const q = query(colRef, where('email', '===', email));   
+    const q = query(colRef, where('email', '==', email));   
   
     try {
         console.log("in signup try part")
@@ -281,7 +281,7 @@ const SignUp = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            if(otp ==="000000"){
+            if(otp =="000000"){
               if(selectedOption !== "Admin"){
                   await signup(email, "666666", name);
                   console.log("signup done");
@@ -290,7 +290,7 @@ const SignUp = () => {
                   const userId = auth.currentUser.uid;
                   localStorage.setItem("isAdmin", "false");
                   localStorage.setItem("isProfessor", "false");
-                  if(selectedOption === "Alumni"){
+                  if(selectedOption == "Alumni"){
                     navigate('/becomeamember', { state: { userId, email } });
                   }
                   else{
@@ -351,7 +351,7 @@ const SignUp = () => {
                 navigate("/signup");
                 return;
             } else {
-              if(selectedOption === "Alumni"){
+              if(selectedOption == "Alumni"){
                   await signup(email, "666666", name);
                   console.log("signup done");
                   notifySuccess("OTP verified successfully");
@@ -364,7 +364,7 @@ const SignUp = () => {
                     navigate('/becomeamember', { state: { userId, email } });
                     return;
                 }
-                if(selectedOption === "Professor"){
+                if(selectedOption == "Professor"){
                   await signup(email, "666666", name);
                   console.log("signup done");
                   notifySuccess("OTP verified successfully");
@@ -377,7 +377,7 @@ const SignUp = () => {
                     navigate('/becomeaprofessor', { state: { userId, email } });
                     return;
                 }
-                if(selectedOption === "Admin"){
+                if(selectedOption == "Admin"){
                     notifySuccess("OTP verified successfully");
                     console.log("in dens admin mail frontend")
                     const data = {
@@ -408,7 +408,7 @@ const SignUp = () => {
                     navigate("/login");
                     return;
                 }
-                if(email === "2021eeb1166@iitrpr.ac.in"){
+                if(email == "2021eeb1166@iitrpr.ac.in"){
                     setIsAdmin(true);
                 }
                 setIsOtpSent(false);
@@ -509,7 +509,7 @@ const SignUp = () => {
                   >
                     Sign Up
                   </button>
-                  { resendDisabled === true ? (
+                  { resendDisabled == true ? (
                     <></>
                   )
                   :
