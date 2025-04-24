@@ -41,7 +41,7 @@ const getFullNameByUserName = async (userName) => {
 };
 
 const FullNameDisplay = ({ userName }) => {
-  console.log("Cache:",fullNameCache);
+  // console.log("Cache:",fullNameCache);
   const [fullName, setFullName] = useState(fullNameCache[userName] || "Loading...");
   const isMounted = useRef(true);
 
@@ -503,7 +503,7 @@ const MessagesPage = () => {
       <div className="w-2/3 flex flex-col h-[calc(100vh-4rem)]">
         {selectedChat ? (
           <div className="flex flex-col h-full">
-            <div className="p-4 bg-gray-200 font-bold border-b">{selectedChat.user || "Chat"}</div>
+            <div className="p-4 bg-gray-200 font-bold border-b">{selectedChat.name || "Chat"}</div>
             <div className="flex-grow p-4 overflow-auto">
               {messages.length > 0 ? (
                 messages.map((msg) => (

@@ -94,15 +94,6 @@ const Navbar = () => {
       </button>
 
       <button
-        onClick={() => navigate("/messages")}
-        className={`px-3 py-1 rounded ${
-          activeTab === "/messages" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"
-        }`}
-      >
-        Messages
-      </button>
-
-      <button
         onClick={() => navigate("/profile/" + user.userName)}
         className={`px-3 py-1 rounded ${
           activeTab === "/profile" ? "bg-gray-200 text-gray-900 font-semibold" : "hover:text-blue-500"

@@ -16,7 +16,7 @@ const Connections = () => {
 
   const handleMessageClick = (userName) => {
     console.log("Got username:",userName);
-    navigate("/messages", { state: { userName } });
+    navigate("/", { state: { userName } });
 };
 
   useEffect(() => {

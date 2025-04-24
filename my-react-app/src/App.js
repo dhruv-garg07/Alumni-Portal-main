@@ -23,15 +23,15 @@ function App() {
             <Route exact path='/profile' element={<Profile/>}/>
           </Route> */}
           <Route path='/profile/:userName' element={<Profile/>}/>
-          <Route exact path='/messages' element={<PrivateRoute/>}>
-            <Route exact path="/messages" element={<Messages />} />
+          <Route exact path='/' element={<PrivateRoute/>}>
+            <Route exact path="/" element={<Messages />} />
           </Route>
           <Route exact path="/becomeamember" element={<BecomeAMember />} />
           <Route exact path="/becomeaprofessor" element={<BecomeAProfessor />} />
           <Route exact path="/datalist" element={<DataList/>} />
           <Route exact path="/connections" element={<Connections/>}/>
-          <Route path="/home" element={<HomePage />} />
-          <Route path="*" element={<Navigate to="/home" />}/>
+          {/* <Route path="/home" element={<HomePage />} />
+          <Route path="*" element={<Navigate to="/home" />}/> */}
         </Routes>
       </AuthProvider>
     </div>
