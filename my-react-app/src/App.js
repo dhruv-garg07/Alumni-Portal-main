@@ -22,16 +22,17 @@ function App() {
           {/* <Route exact path='/profile' element={<PrivateRoute/>}>
             <Route exact path='/profile' element={<Profile/>}/>
           </Route> */}
-          <Route path='/profile/:userName' element={<Profile/>}/>
-          <Route exact path='/' element={<PrivateRoute/>}>
+          <Route path="/profile/:userName" element={<Profile />} />
+          <Route exact path="/" element={<PrivateRoute />}>
             <Route exact path="/" element={<Messages />} />
           </Route>
           <Route exact path="/becomeamember" element={<BecomeAMember />} />
           <Route exact path="/becomeaprofessor" element={<BecomeAProfessor />} />
-          <Route exact path="/datalist" element={<DataList/>} />
-          <Route exact path="/connections" element={<Connections/>}/>
-          {/* <Route path="/home" element={<HomePage />} />
-          <Route path="*" element={<Navigate to="/home" />}/> */}
+          <Route exact path="/datalist" element={<DataList />} />
+          <Route exact path="/connections" element={<Connections />} />
+
+          {/* ✅ Redirect unknown routes to '/' */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </div>
