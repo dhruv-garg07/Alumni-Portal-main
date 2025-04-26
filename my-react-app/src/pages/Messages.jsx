@@ -17,6 +17,7 @@ import {arrayRemove} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useLocation } from "react-router-dom";
 import CreateGroupModal from "../components/CreateGroupModal"
+import AddMembersModal from "../components/AddMembersModal"
 
 const fullNameCache = {}; 
 const getFullNameByUserName = async (userName) => {
@@ -74,7 +75,8 @@ const handleRemoveParticipant = async(selectedChat,userId) => {
   // You can later call your API here too
   console.log("Removing participant with ID:", userId);
   try {
-    const chatRef = doc(db, "chats", selectedChat.id); // "chats" is the collection, and selectedChat.id is the document ID of the chat
+    const chatRef = doc(db, "groups", selectedChat.id); // "chats" is the collection, and selectedChat.id is the document ID of the chat
+    console.log("R", userId);
     await updateDoc(chatRef, {
       participants: arrayRemove(userId), // Removes the userId from the participants array
     });
@@ -99,6 +101,7 @@ const MessagesPage = () => {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [connections, setConnections] = useState([]);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
 
 
 
@@ -323,6 +326,33 @@ const MessagesPage = () => {
   }, [requestedUserName, currentUser]);  // Trigger whenever currentUser updates
 
 
+
+  useEffect(() => {
+    if (!selectedChat || !selectedChat.id) return;
+    const chatRef = doc(db, "groups", selectedChat.id);
+
+    // Real-time listener for updates to the chat participants
+    const unsubscribe = onSnapshot(chatRef, (docSnap) => {
+      if (docSnap.exists()) {
+        // If the document exists, update the participants
+        setSelectedChat((prevChat) => ({
+          ...prevChat,
+          participants: docSnap.data().participants,
+        }));
+      }
+    });
+
+    return () => unsubscribe(); // Clean up listener when component unmounts
+  }, [selectedChat?.id]);
+
+  // Function to update participants locally
+  const handleAddMembers = (newMembers) => {
+    setSelectedChat((prevChat) => ({
+      ...prevChat,
+      participants: [...prevChat.participants, ...newMembers],
+    }));
+  }
+
   const handleSelectChat = async (chat) => {
     console.log("The handleSelectChat is being invoked:",chat);
     console.log("Participants for chat:",chat.participants);
@@ -388,6 +418,9 @@ const MessagesPage = () => {
       });
   
       // Update chat metadata (last message timestamp)
+      console.log("Chat-id is:",chatId);
+      console.log("Selected Chat:",selectedChat);
+      console.log("Current User:",currentUser);
       const chatRef = doc(db, "chats", chatId);
       await updateDoc(chatRef, { lastMessageAt: new Date() });
   
@@ -454,112 +487,155 @@ const MessagesPage = () => {
 };
 
 
+
   return (
     <div className="flex h-screen">
-      {/* Left Sidebar (Chats & Groups) */}
-<div className="w-1/3 bg-gray-100 p-4 border-r">
-  {/* Tabs */}
-  <div className="flex justify-between mb-4">
-    <button
-      className={`p-2 ${activeTab === "chats" ? "font-bold" : ""}`}
-      onClick={() => setActiveTab("chats")}
-    >
-      Chats
-    </button>
-    <button
-      className={`p-2 ${activeTab === "groups" ? "font-bold" : ""}`}
-      onClick={() => setActiveTab("groups")}
-    >
-      Groups
-    </button>
-  </div>
-
-  {/* "Create Group" button - Only shown when in "Groups" tab */}
-  {activeTab === "groups" && (
-    <div className="mb-4">
-      <button 
-  onClick={() => setShowCreateGroupModal(true)}
-  className="p-2 bg-blue-500 text-white rounded"
->
-  + Create Group
-</button>
-
-{showCreateGroupModal && <CreateGroupModal connections={connections}  currentUser={currentUser} onClose={() => setShowCreateGroupModal(false)} />}
-
-    </div>
-  )}
-
-  {/* Chat List */}
-  <div>
-    {(activeTab === "chats"
-      ? chats.filter((chat) => currentUser && chat.participants.includes(currentUser.userName))
-      : groups.filter((group) => currentUser && group.participants.includes(currentUser.userName))
-    ).map((chatOrGroup) => (
-      <div
-        key={chatOrGroup.id || chatOrGroup.participants.join("-")}
-        className="p-3 border-b cursor-pointer hover:bg-gray-200"
-        onClick={() => handleSelectChat(chatOrGroup)}
+  {/* Left Sidebar (Chats & Groups) */}
+  <div className="w-1/3 bg-gray-100 p-4 border-r">
+    {/* Tabs */}
+    <div className="flex justify-between mb-4">
+      <button
+        className={`p-2 ${activeTab === "chats" ? "font-bold" : ""}`}
+        onClick={() => setActiveTab("chats")}
       >
-        <p className="font-semibold">
-          {activeTab === "chats" ? (
-            <FullNameDisplay 
-              userName={chatOrGroup.participants.find((p) => p !== currentUser?.userName) || "Unknown User"} 
-            />
-          ) : (
-            chatOrGroup.name // Show group name instead of individual participants
-          )}
-        </p>
+        Chats
+      </button>
+      <button
+        className={`p-2 ${activeTab === "groups" ? "font-bold" : ""}`}
+        onClick={() => setActiveTab("groups")}
+      >
+        Groups
+      </button>
+    </div>
+
+    {/* "Create Group" button - Only shown when in "Groups" tab */}
+    {activeTab === "groups" && (
+      <div className="mb-4">
+        <button 
+          onClick={() => setShowCreateGroupModal(true)}
+          className="p-2 bg-blue-500 text-white rounded"
+        >
+          + Create Group
+        </button>
+
+        {showCreateGroupModal && <CreateGroupModal connections={connections} currentUser={currentUser} onClose={() => setShowCreateGroupModal(false)} />}
       </div>
-    ))}
+    )}
+
+    {/* Chat List */}
+    <div>
+      {(activeTab === "chats"
+        ? chats.filter((chat) => currentUser && chat.participants.includes(currentUser.userName))
+        : groups.filter((group) => currentUser && group.participants.includes(currentUser.userName))
+      ).map((chatOrGroup) => (
+        <div
+          key={chatOrGroup.id || chatOrGroup.participants.join("-")}
+          className="p-3 border-b cursor-pointer hover:bg-gray-200"
+          onClick={() => handleSelectChat(chatOrGroup)}
+        >
+          <p className="font-semibold">
+            {activeTab === "chats" ? (
+              <FullNameDisplay 
+                userName={chatOrGroup.participants.find((p) => p !== currentUser?.userName) || "Unknown User"} 
+              />
+            ) : (
+              chatOrGroup.name // Show group name instead of individual participants
+            )}
+          </p>
+        </div>
+      ))}
+    </div>
   </div>
-</div>
 
-  
-      {/* Chat Window */}
-      <div className="w-2/3 flex flex-col h-[calc(100vh-4rem)]">
-        {selectedChat ? (
-          <div className="flex flex-col h-full">
-            <div
-              className="p-4 bg-gray-200 font-bold border-b cursor-pointer hover:bg-gray-300"
-              onClick={() => setShowParticipants(!showParticipants)}
-            >
-              {selectedChat.name || "Chat"}
-            </div>
+  {/* Chat Window */}
+  <div className="w-2/3 flex flex-col h-[calc(100vh-4rem)]">
+    {selectedChat ? (
+      <div className="flex flex-col h-full">
+        {/* Chat or Participants Section */}
+        <div
+          className="p-4 bg-gray-200 font-bold border-b cursor-pointer hover:bg-gray-300"
+          onClick={() => setShowParticipants(!showParticipants)}
+        >
+          {selectedChat.name || "Chat"}
+        </div>
 
-            {showParticipants && (
-                <div className="bg-white shadow p-4 border-b">
-                  <p className="font-semibold mb-2">Participants:</p>
-                  <ul>
-                    {selectedChat.participants.map((participant) => (
-                      <li
-                        key={participant}
-                        className="flex justify-between items-center mb-1 text-sm"
-                      >
-                        <span><FullNameDisplay userName={participant} /></span>
+        {showParticipants ? (
+          // Participants List
+          <div className="flex flex-col flex-grow p-8 bg-gray-50">
+            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Participants
+                </h2>
+                {isProfessor && (
+                  <button
+                    className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow"
+                    onClick={() => setIsAddMembersOpen(true)}
+                  >
+                    + Add Members
+                  </button>
+                )}
+              </div>
+
+              <ul className="space-y-4">
+                {selectedChat.participants
+                  .filter((participant) => participant !== currentUser.userName) // Hide current user
+                  .map((participant) => (
+                    <li
+                      key={participant}
+                      className="flex items-center justify-between bg-gray-100 p-4 rounded-lg"
+                    >
+                      <span className="text-gray-700 font-medium">
+                        <FullNameDisplay userName={participant} />
+                      </span>
+                      {isProfessor && (
                         <button
-                          className="text-red-500 hover:underline text-xs"
-                          onClick={() => handleRemoveParticipant(selectedChat,participant)}
+                          className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                          onClick={() => handleRemoveParticipant(selectedChat, participant)}
                         >
                           Remove
                         </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-            <div className="flex-grow p-4 overflow-auto">
-              {messages.length > 0 ? (
-                messages.map((msg) => (
-                  <div key={msg.id} className="mb-2">
-                    <span className="font-bold">{msg.senderName}:</span> {msg.text}
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500">No messages yet</p>
-              )}
+                      )}
+                    </li>
+                  ))
+                }
+                {/* Current user separately */}
+                <li className="flex items-center justify-between bg-gray-200 p-4 rounded-lg">
+                  <span className="text-gray-700 font-semibold">
+                    <FullNameDisplay userName={currentUser.userName} /> (You)
+                  </span>
+                </li>
+              </ul>
             </div>
-            <div className="p-4 border-t flex">
+          </div>
+        ) : (
+          // Chat Messages Section
+          <div className="flex-grow p-4 overflow-auto">
+            {messages.length > 0 ? (
+              messages.map((msg) => (
+                <div key={msg.id} className="mb-2">
+                  <span className="font-bold">{msg.senderName}:</span> {msg.text}
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">No messages yet</p>
+            )}
+          </div>
+        )}
+
+        {/* Add Members Modal */}
+        {isAddMembersOpen && (
+          <AddMembersModal
+            selectedChat={selectedChat}
+            connections={connections}
+            onAddMembers={handleAddMembers}
+            onClose={() => setIsAddMembersOpen(false)}
+          />
+        )}
+
+        {/* Message Input */}
+        {!showParticipants && (
+          <div className="p-4 border-t flex">
             <input
               type="text"
               placeholder="Type a message..."
@@ -583,15 +659,16 @@ const MessagesPage = () => {
               Send
             </button>
           </div>
-
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            Select a chat to start messaging
-          </div>
         )}
       </div>
-    </div>
+    ) : (
+      <div className="flex-grow flex items-center justify-center">
+        <p className="text-gray-500">Select a chat or group to start messaging</p>
+      </div>
+    )}
+  </div>
+</div>
+
   );
   
 };
