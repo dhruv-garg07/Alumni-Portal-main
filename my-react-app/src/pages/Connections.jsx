@@ -13,6 +13,7 @@ const Connections = () => {
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [isProfessor, setIsProfessor] = useState(false);
   const navigate = useNavigate();
+  const [userLoaded, setUserLoaded] = useState(false);
 
   const handleMessageClick = (userName) => {
     console.log("Got username:",userName);
@@ -37,8 +38,10 @@ const Connections = () => {
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("Current User:", currentUser);
       if (currentUser) {
         try {
+          console.log("Inside auth state change");
           const collections = ["Users", "Professors", "admin"];
           let userData = null;
 
@@ -52,8 +55,9 @@ const Connections = () => {
               break;
             }
           }
-
+          console.log("Found userData",userData);
           setUser(userData || currentUser);
+          setUserLoaded(true);
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
@@ -63,14 +67,14 @@ const Connections = () => {
         setConnections([]);
       }
     });
-
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
+    console.log("User loaded:", userLoaded);
+    console.log("User:", user);
+    if (!userLoaded || !user || !user.userName) return;
     console.log("Inside fetch connections:", user);
-    if (!user || !user.userName) return;
-
     const fetchConnectionsAndRequests = async () => {
         try {
             const connectionRef = collection(db, "connectionRequests");

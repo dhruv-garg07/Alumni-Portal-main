@@ -13,7 +13,7 @@ import {
     where,
     updateDoc
 } from "../firebase";  
-import {arrayRemove} from "firebase/firestore";
+import {arrayRemove, deleteDoc} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useLocation } from "react-router-dom";
 import CreateGroupModal from "../components/CreateGroupModal"
@@ -102,11 +102,10 @@ const MessagesPage = () => {
   const [connections, setConnections] = useState([]);
   const [showParticipants, setShowParticipants] = useState(false);
   const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
-
+  const [isProfessor, setIsProfessor] = useState(false);
 
 
   const isAdmin = localStorage.getItem("isAdmin");
-  const isProfessor = localStorage.getItem("isProfessor");
 
 
   useEffect(() => {
@@ -123,6 +122,9 @@ const MessagesPage = () => {
             const snapshot = await getDocs(q);
 
             if (!snapshot.empty) {
+              if(collectionName == "Professors"){
+                setIsProfessor(true);
+              }
               currentUserData = snapshot.docs[0].data();
               break;
             }
@@ -160,6 +162,8 @@ const MessagesPage = () => {
         ]);
   
         //  Store all accepted individual connections
+        console.log("Confirmed Connections 1:", confirmedSnapshot1.docs);
+        console.log("Confirmed Connections 2:", confirmedSnapshot2.docs);
         const allConnections = [
           ...confirmedSnapshot1.docs.map(doc => ({ id: doc.id, userName: doc.data().sender })),
           ...confirmedSnapshot2.docs.map(doc => ({ id: doc.id, userName: doc.data().receiver }))
@@ -354,7 +358,9 @@ const MessagesPage = () => {
   }
 
   const handleSelectChat = async (chat) => {
+    console.log("Current User is professor:",isProfessor);
     console.log("The handleSelectChat is being invoked:",chat);
+    console.log("Current User is professor:",isProfessor);
     console.log("Participants for chat:",chat.participants);
     if (!chat || !currentUser) return;
     
@@ -431,6 +437,7 @@ const MessagesPage = () => {
   };
   
   const handleSelectChatByUserName = async (userName) => {
+    console.log("Current User is professor:",isProfessor);
     console.log("Inside handleSelectChatByUserName:", userName);
     
     if (!userName) return;
@@ -486,6 +493,43 @@ const MessagesPage = () => {
     }
 };
 
+const handleLeaveGroup = async (group) => {
+  if (!window.confirm("Are you sure you want to leave this group?")) return;
+
+  const groupRef = doc(db, "groups", group.id);
+
+  try {
+    // Remove user from participants array
+    const updatedParticipants = group.participants.filter(
+      (p) => p !== currentUser.userName
+    );
+
+    // If user is the admin, optionally prevent leaving or assign a new admin
+    if (group.admin === currentUser.userName) {
+      if (updatedParticipants.length === 0) {
+        // Delete the group if no one is left
+        await deleteDoc(groupRef);
+        setSelectedChat(null);
+        return;
+      } else {
+        // Assign new admin (first participant)
+        await updateDoc(groupRef, {
+          participants: updatedParticipants,
+          admin: updatedParticipants[0],
+        });
+      }
+    } else {
+      // Just remove from participants
+      await updateDoc(groupRef, {
+        participants: updatedParticipants,
+      });
+    }
+
+    setSelectedChat(null); // Exit the chat view
+  } catch (error) {
+    console.error("Failed to leave group:", error);
+  }
+};
 
 
   return (
@@ -509,7 +553,7 @@ const MessagesPage = () => {
     </div>
 
     {/* "Create Group" button - Only shown when in "Groups" tab */}
-    {activeTab === "groups" && (
+    {isProfessor && activeTab === "groups" && (
       <div className="mb-4">
         <button 
           onClick={() => setShowCreateGroupModal(true)}
@@ -558,109 +602,133 @@ const MessagesPage = () => {
         >
           {selectedChat.name || "Chat"}
         </div>
-
         {showParticipants ? (
-          // Participants List
-          <div className="flex flex-col flex-grow p-8 bg-gray-50">
-            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  Participants
-                </h2>
-                {isProfessor && (
-                  <button
-                    className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow"
-                    onClick={() => setIsAddMembersOpen(true)}
-                  >
-                    + Add Members
-                  </button>
-                )}
-              </div>
-
-              <ul className="space-y-4">
-                {selectedChat.participants
-                  .filter((participant) => participant !== currentUser.userName) // Hide current user
-                  .map((participant) => (
-                    <li
-                      key={participant}
-                      className="flex items-center justify-between bg-gray-100 p-4 rounded-lg"
-                    >
-                      <span className="text-gray-700 font-medium">
-                        <FullNameDisplay userName={participant} />
-                      </span>
-                      {isProfessor && (
-                        <button
-                          className="text-red-500 hover:text-red-700 text-sm font-semibold"
-                          onClick={() => handleRemoveParticipant(selectedChat, participant)}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </li>
-                  ))
-                }
-                {/* Current user separately */}
-                <li className="flex items-center justify-between bg-gray-200 p-4 rounded-lg">
-                  <span className="text-gray-700 font-semibold">
-                    <FullNameDisplay userName={currentUser.userName} /> (You)
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        ) : (
-          // Chat Messages Section
-          <div className="flex-grow p-4 overflow-auto">
-            {messages.length > 0 ? (
-              messages.map((msg) => (
-                <div key={msg.id} className="mb-2">
-                  <span className="font-bold">{msg.senderName}:</span> {msg.text}
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">No messages yet</p>
-            )}
-          </div>
-        )}
-
-        {/* Add Members Modal */}
-        {isAddMembersOpen && (
-          <AddMembersModal
-            selectedChat={selectedChat}
-            connections={connections}
-            onAddMembers={handleAddMembers}
-            onClose={() => setIsAddMembersOpen(false)}
-          />
-        )}
-
-        {/* Message Input */}
-        {!showParticipants && (
-          <div className="p-4 border-t flex">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              className="flex-grow p-2 border rounded"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  sendMessage();
-                  setNewMessage(""); // Clear input after sending
-                }
-              }}
-            />
-            <button 
-              onClick={() => {
-                sendMessage();
-                setNewMessage(""); // Clear input after sending
-              }} 
-              className="ml-2 bg-blue-500 text-white p-2 rounded"
-            >
-              Send
-            </button>
-          </div>
+  // Participants List
+  <div className="flex flex-col flex-grow p-8 bg-gray-50">
+    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 overflow-y-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Participants</h2>
+        {selectedChat.admin === currentUser.userName && (
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow"
+            onClick={() => setIsAddMembersOpen(true)}
+          >
+            + Add Members
+          </button>
         )}
       </div>
+
+      <ul className="space-y-4">
+        {selectedChat.participants
+          .filter((participant) => participant !== currentUser.userName) // Hide current user
+          .map((participant) => (
+            <li
+              key={participant}
+              className="flex items-center justify-between bg-gray-100 p-4 rounded-lg"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-gray-700 font-medium">
+                  <FullNameDisplay userName={participant} />
+                </span>
+                {selectedChat.admin === participant && (
+                  <span className="text-green-600 text-xs font-semibold ml-2">
+                    (Admin)
+                  </span>
+                )}
+              </div>
+              {selectedChat.admin === currentUser.userName && (
+                <button
+                  className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                  onClick={() =>
+                    handleRemoveParticipant(selectedChat, participant)
+                  }
+                >
+                  Remove
+                </button>
+              )}
+            </li>
+          ))}
+        {/* Current user separately */}
+        <li className="flex items-center justify-between bg-gray-200 p-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-700 font-semibold">
+              <FullNameDisplay userName={currentUser.userName} /> (You)
+            </span>
+            {selectedChat.admin === currentUser.userName && (
+              <span className="text-green-600 text-xs font-semibold ml-2">
+                (Admin)
+              </span>
+            )}
+          </div>
+        </li>
+        {selectedChat.participants.includes(currentUser.userName) && (
+  <div className="mt-6 text-center">
+    <button
+      className="bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow"
+      onClick={() => handleLeaveGroup(selectedChat)}
+    >
+      Leave Group
+    </button>
+  </div>
+)}
+
+
+      </ul>
+    </div>
+  </div>
+
+) : (
+  // Chat Messages Section
+  <div className="flex-grow p-4 overflow-auto">
+    {messages.length > 0 ? (
+      messages.map((msg) => (
+        <div key={msg.id} className="mb-2">
+          <span className="font-bold">{msg.senderName}:</span> {msg.text}
+        </div>
+      ))
+    ) : (
+      <p className="text-gray-500">No messages yet</p>
+    )}
+  </div>
+)}
+
+{isAddMembersOpen && (
+  <AddMembersModal
+    selectedChat={selectedChat}
+    connections={connections}
+    onAddMembers={handleAddMembers}
+    onClose={() => setIsAddMembersOpen(false)}
+  />
+)}
+
+{!showParticipants && (
+  <div className="p-4 border-t flex">
+    <input
+      type="text"
+      placeholder="Type a message..."
+      className="flex-grow p-2 border rounded"
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          sendMessage();
+          setNewMessage(""); // Clear input after sending
+        }
+      }}
+    />
+    <button
+      onClick={() => {
+        sendMessage();
+        setNewMessage(""); // Clear input after sending
+      }}
+      className="ml-2 bg-blue-500 text-white p-2 rounded"
+    >
+      Send
+    </button>
+  </div>
+)}
+
+        </div>
     ) : (
       <div className="flex-grow flex items-center justify-center">
         <p className="text-gray-500">Select a chat or group to start messaging</p>

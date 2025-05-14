@@ -12,7 +12,8 @@ const Navbar = () => {
   const [activeTab, setActiveTab] = useState(location.pathname);
   const [user, setUser] = useState(null);
   const [selectedProfessor, setSelectedProfessor] = useState(null);
-
+  const [isProfessor,setIsProfessor] = useState(false);
+  const [isAdmin,setIsAdmin] = useState(false);
   // Update active tab when route changes
   useEffect(() => {
     setActiveTab(location.pathname);
@@ -31,6 +32,12 @@ const Navbar = () => {
             const snapshot = await getDocs(q);
   
             if (!snapshot.empty) {
+              if(collectionName === "Professors"){
+                setIsProfessor(true);
+              }
+              if(collectionName === "admin"){
+                setIsAdmin(true);
+              }
               userData = snapshot.docs[0].data();
               break; // Stop checking once a match is found
             }
@@ -100,7 +107,9 @@ const Navbar = () => {
         }`}
       >
         Profile
+        {isAdmin ? " (Ad)" : isProfessor ? " (Pr)" : " (Al)"}
       </button>
+
 
       <button onClick={handleLogout} className="text-gray-600 hover:text-red-500">
         Logout
